@@ -1,9 +1,46 @@
+// #![warn(rust_2018_idioms)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
+
 #[macro_use]
 extern crate lazy_static;
 
-pub mod params;
-mod backtest_runner;
+#[macro_use]
+extern crate serde_derive;
 
-fn main() {
-    println!("Hello, world!");
+mod backtest_runner;
+mod params;
+mod xml_reader;
+
+use backtest_runner::*;
+
+use std::future::Future;
+use std::process::Command;
+
+use tokio::io::AsyncWriteExt;
+
+#[tokio::main]
+async fn main() {
+
+    // backtest_runner::run().await;
+    /*     println!("Hello, world!");
+     *
+     *
+     *     async fn start_terminal_t() {
+     *         println!("start sleep");
+     *         let s = Command::new("sleep")
+     *             .arg("10")
+     *             .output();
+     *         println!("{:?}", s);
+     *     }
+     *
+     *     async {
+     *         let f = start_terminal_t();
+     *         println!("started, waiting");
+     *         f.await;
+     *         println!("finished");
+     *     };
+     *
+     *     // start_start();
+     *     println!("fin out"); */
 }

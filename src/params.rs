@@ -1,49 +1,59 @@
-#[allow(dead_code)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
 
-// use std::vec:Vec;
-use std::path::{Path,PathBuf};
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::io;
+use std::path::{Path, PathBuf};
 
-const FOREX_PAIRS : &'static [&'static str] = &[
-        "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF",
-        "EURJPY", "EURGBP", "EURCAD", "GBPCHF", "GBPJPY", "AUDJPY", "AUDNZD",
-        "AUDCAD", "AUDCHF", "CHFJPY", "EURAUD", "EURNZD", "CADCHF", "GBPAUD",
-        "GBPCAD", "GBPNZD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD", "CADJPY"];
+// extern crate serde;
+// extern crate serde_json;
 
-#[derive(Debug, Default, PartialEq)]
+use serde::{Deserialize, Serialize};
+use serde_json::{self, json};
+
+const FOREX_PAIRS: &'static [&'static str] = &[
+    "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
+    "EURCAD", "GBPCHF", "GBPJPY", "AUDJPY", "AUDNZD", "AUDCAD", "AUDCHF", "CHFJPY", "EURAUD",
+    "EURNZD", "CADCHF", "GBPAUD", "GBPCAD", "GBPNZD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD",
+    "CADJPY",
+];
+
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Indicator {
-    name : String,
-    indi_type : String,
-    inputs : Vec<Input>,
-    shift : Option<u8>,
+    name: String,
+    indi_type: String,
+    inputs: Vec<Input>,
+    shift: Option<u8>,
 }
 
 impl Indicator {
     // maybe implement io::Write instead?
     pub fn to_params_config(&self) -> String {
-        let mut string : String = format!("{indi_type}_Indicator={name}\n",
-                                  indi_type = self.indi_type,
-                                  name = self.name);
+        let mut string: String = format!(
+            "{indi_type}_Indicator={name}\n",
+            indi_type = self.indi_type,
+            name = self.name
+        );
         for (i, inp) in self.inputs.iter().enumerate() {
-            string.push_str(&format!("{indi_type}_{input_type}{idx}=\
-                                    {input_value}\n",
-                                  indi_type = self.indi_type,
-                                  input_type = inp.type_str(),
-                                  input_value = inp.value_str(),
-                                  idx = i,
-                                  ));
+            string.push_str(&format!(
+                "{indi_type}_{input_type}{idx}=\
+                 {input_value}\n",
+                indi_type = self.indi_type,
+                input_type = inp.type_str(),
+                input_value = inp.value_str(),
+                idx = i,
+            ));
         }
         match self.shift {
             Some(a) => string.push_str(&format!("{}_Shift={}\n", self.indi_type, a)),
-            _ => {},
+            _ => {}
         }
 
         string
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Input {
     Int(i32),
     Double(f32),
@@ -69,15 +79,15 @@ impl Input {
     }
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct IndicatorSet {
-    confirm : Option<Indicator>,
-    confirm2 : Option<Indicator>,
-    confirm3 : Option<Indicator>,
-    exit : Option<Indicator>,
-    cont : Option<Indicator>,
-    baseline : Option<Indicator>,
-    volume : Option<Indicator>,
+    confirm: Option<Indicator>,
+    confirm2: Option<Indicator>,
+    confirm3: Option<Indicator>,
+    exit: Option<Indicator>,
+    cont: Option<Indicator>,
+    baseline: Option<Indicator>,
+    volume: Option<Indicator>,
 }
 
 impl IndicatorSet {
@@ -85,50 +95,49 @@ impl IndicatorSet {
         let mut string = String::new();
         match &self.confirm {
             Some(i) => string.push_str(&i.to_params_config()),
-            _ => {},
+            _ => {}
         }
         match &self.confirm2 {
             Some(i) => string.push_str(&i.to_params_config()),
-            _ => {},
+            _ => {}
         }
         match &self.confirm3 {
             Some(i) => string.push_str(&i.to_params_config()),
-            _ => {},
+            _ => {}
         }
         match &self.cont {
             Some(i) => string.push_str(&i.to_params_config()),
-            _ => {},
+            _ => {}
         }
         match &self.exit {
             Some(i) => string.push_str(&i.to_params_config()),
-            _ => {},
+            _ => {}
         }
         match &self.baseline {
             Some(i) => string.push_str(&i.to_params_config()),
-            _ => {},
+            _ => {}
         }
         match &self.volume {
             Some(i) => string.push_str(&i.to_params_config()),
-            _ => {},
+            _ => {}
         }
 
         string
     }
 }
 
-
 // input from the API
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RunParams {
-    name : String,
-    indi_set : IndicatorSet,
-    date : (String, String),
-    backtest_model : BacktestModel,
-    optimize : OptimizeMode,
-    optimize_crit :  OptimizeCrit,
-    visual : bool,
+    pub name: String,
+    pub indi_set: IndicatorSet,
+    pub date: (String, String),
+    pub backtest_model: BacktestModel,
+    optimize: OptimizeMode,
+    optimize_crit: OptimizeCrit,
+    visual: bool,
     // symbols : &[],
-    symbols : Vec<String>,
+    pub symbols: Vec<String>,
 }
 
 impl RunParams {
@@ -137,42 +146,42 @@ impl RunParams {
     }
 
     fn to_config(&self) -> String {
-        format!("
+        format!(
+            "
 Visual={visual}
 FromDate={from_date}
 ToDate={to_date}
 Model={model}
 Optimization={opti}
 OptimizationCriterion={opti_crit}",
-                visual = self.visual as i32,
-                from_date = self.date.0,
-                to_date = self.date.1,
-                model = self.backtest_model as u8,
-                opti = self.optimize as u8,
-                opti_crit = self.optimize_crit as u8)
+            visual = self.visual as i32,
+            from_date = self.date.0,
+            to_date = self.date.1,
+            model = self.backtest_model as u8,
+            opti = self.optimize as u8,
+            opti_crit = self.optimize_crit as u8
+        )
     }
 
     pub fn new() -> Self {
-        RunParams{
-            name : "backtest".to_string(),
-            indi_set : IndicatorSet::default(),
-            date : ("2017.08.01".to_string(), "2019.08.20".to_string()),
-            backtest_model : BacktestModel::default(),
-            optimize : OptimizeMode::default(),
-            optimize_crit :  OptimizeCrit::default(),
-            visual : false,
-            symbols : FOREX_PAIRS.iter().map(|s| s.to_string()).collect(),
-                // to_vec().to_string(),
+        RunParams {
+            name: "backtest".to_string(),
+            indi_set: IndicatorSet::default(),
+            date: ("2017.08.01".to_string(), "2019.08.20".to_string()),
+            backtest_model: BacktestModel::default(),
+            optimize: OptimizeMode::default(),
+            optimize_crit: OptimizeCrit::default(),
+            visual: false,
+            symbols: FOREX_PAIRS.iter().map(|s| s.to_string()).collect(),
+            // to_vec().to_string(),
             // symbols_iter : symbols.iter()
         }
     }
-    
+
     pub fn iter(&self) -> impl Iterator<Item = &String> {
         self.symbols.iter()
     }
 }
-
-
 
 /* impl Iterator for RunParams {
  *     type Item = String;
@@ -183,50 +192,53 @@ OptimizationCriterion={opti_crit}",
  *     }
  * } */
 
-
-
 // terminal execution specific configuration
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CommonParams {
-    pub params_file : String,
-    pub terminal_exe : PathBuf,
-    pub workdir : PathBuf,
-    pub reports : PathBuf,
-    pub expert : String,
-    pub period : String,
-    pub login : String,
-    pub use_remote : bool,
-    pub use_local : bool,
-    pub replace_report : bool,
-    pub shutdown_terminal : bool,
-    pub deposit : u32,
-    pub currency : String,
-    pub leverage : u16,
-    pub execution_mode : u8,
+    pub params_file: String,
+    pub terminal_exe: PathBuf,
+    pub workdir: PathBuf,
+    pub reports: PathBuf,
+    pub expert: String,
+    pub period: String,
+    pub login: String,
+    pub use_remote: bool,
+    pub use_local: bool,
+    pub replace_report: bool,
+    pub shutdown_terminal: bool,
+    pub deposit: u32,
+    pub currency: String,
+    pub leverage: u16,
+    pub execution_mode: u8,
     // run_params : RunParams,
 }
 
 impl CommonParams {
     pub fn new(workdir: &Path) -> Self {
         CommonParams {
-            params_file : "expert_params.set".to_string(),
-            terminal_exe : PathBuf::from(r"C:/Program Files/MetaTrader 5/terminal64.exe"),
-            workdir : workdir.to_path_buf(),
-            reports : workdir.join("reports"),
+            params_file: "expert_params.set".to_string(),
+            terminal_exe: PathBuf::from(r"C:/Program Files/MetaTrader 5/terminal64.exe"),
+            workdir: workdir.to_path_buf(),
+            reports: workdir.join("reports"),
             // expert : "nnfx-ea/nnfx-ea.ex5".to_string(),
-            expert : "expert/expert.ex5".to_string(),
-            period : "D1".to_string(),
-            login : "".to_string(),
-            use_remote : true,
-            use_local : true,
-            replace_report : true,
-            shutdown_terminal : true,
-            deposit : 10000,
-            currency : "USD".to_string(),
-            leverage : 100,
-            execution_mode : 0,
+            expert: "expert/expert.ex5".to_string(),
+            period: "D1".to_string(),
+            login: "".to_string(),
+            use_remote: true,
+            use_local: true,
+            replace_report: true,
+            shutdown_terminal: true,
+            deposit: 10000,
+            currency: "USD".to_string(),
+            leverage: 100,
+            execution_mode: 0,
             // run_params : run,
         }
+    }
+
+    pub fn reports_dir(mut self, reports_dir: &str) -> Self {
+        self.reports = reports_dir.into();
+        self
     }
 
     pub fn params_path(&self) -> PathBuf {
@@ -237,7 +249,8 @@ impl CommonParams {
     }
 
     pub fn to_config(&self) -> String {
-        format!("
+        format!(
+            "
 Expert={expert}
 ExpertParameters={params_file}
 Period={period}
@@ -250,41 +263,50 @@ Deposit={deposit}
 Currency={currency}
 Leverage={leverage}
 ExecutionMode={exec_mode}",
-                expert = self.expert,
-                params_file = self.params_file,
-                period = self.period,
-                login = self.login,
-                use_local = self.use_local as i32,
-                use_remote = self.use_remote as i32,
-                replace_report = self.replace_report as i32,
-                shutdown_terminal = self.shutdown_terminal as i32,
-                deposit = self.deposit,
-                currency = self.currency,
-                leverage = self.leverage,
-                exec_mode = self.execution_mode)
+            expert = self.expert,
+            params_file = self.params_file,
+            period = self.period,
+            login = self.login,
+            use_local = self.use_local as i32,
+            use_remote = self.use_remote as i32,
+            replace_report = self.replace_report as i32,
+            shutdown_terminal = self.shutdown_terminal as i32,
+            deposit = self.deposit,
+            currency = self.currency,
+            leverage = self.leverage,
+            exec_mode = self.execution_mode
+        )
     }
 }
 
-pub fn to_terminal_config(common : &CommonParams, run : &RunParams, symbol : &String) -> String {
-        let mut reports_path = reports_dir(common, run).join(symbol);
-        reports_path.set_extension("xml");
-        let reports_path = reports_path.as_os_str();
-        format!("[Tester]
+pub fn to_terminal_config(common: &CommonParams, run: &RunParams, symbol: &String) -> String {
+    let mut reports_path = get_reports_dir(common, run).join(symbol);
+    reports_path.set_extension("xml");
+    let reports_path = reports_path.as_os_str();
+    format!(
+        "[Tester]
 {common}
 {run}
 Symbol={symb}
 Report={report}",
-                common = common.to_config(),
-                run = run.to_config(),
-                symb = symbol,
-                report = reports_path.to_string_lossy()
-                )
+        common = common.to_config(),
+        run = run.to_config(),
+        symb = symbol,
+        report = reports_path.to_string_lossy()
+    )
 }
 
-fn reports_dir(common : &CommonParams, run: &RunParams) -> PathBuf {
+fn get_reports_dir(common: &CommonParams, run: &RunParams) -> PathBuf {
     common.reports.join(&run.name)
 }
 
+pub fn get_reports_path(common: &CommonParams, run: &RunParams, symbol: &String) -> PathBuf {
+    let mut reports_path = get_reports_dir(&common, &run).join(symbol);
+    reports_path.set_extension("xml");
+    reports_path
+
+    // reports_path.into_os_string()
+}
 
 /* Expert={expert}
  * ExpertParameters={params_file}
@@ -327,49 +349,56 @@ fn reports_dir(common : &CommonParams, run: &RunParams) -> PathBuf {
  * ) */
 // }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+
+#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum BacktestModel {
-    EveryTick = 0, // "Every tick"
+    EveryTick = 0,     // "Every tick"
     OneMinuteOHLC = 1, // "1 minute OHLC"
-    OpenPrice = 2, // "Open price only"
-    MathCalc = 3, // "Math calculations"
+    OpenPrice = 2,     // "Open price only"
+    MathCalc = 3,      // "Math calculations"
     EveryTickReal = 4, // "Every tick based on real ticks"
 }
 
 // fn f(m: &)
 
 impl Default for BacktestModel {
-    fn default() -> Self { BacktestModel::OpenPrice }
+    fn default() -> Self {
+        BacktestModel::OpenPrice
+    }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum OptimizeMode {
-    Disabled = 0,  // optimization disabled
-    Complete = 1,  // "Slow complete algorithm"
-    Genetic = 2,  // "Fast genetic based algorithm"
-    AllSymbols = 3,  // "All symbols selected in Market Watch"
+    Disabled = 0,   // optimization disabled
+    Complete = 1,   // "Slow complete algorithm"
+    Genetic = 2,    // "Fast genetic based algorithm"
+    AllSymbols = 3, // "All symbols selected in Market Watch"
 }
 
 impl Default for OptimizeMode {
-    fn default() -> Self { OptimizeMode::Complete }
+    fn default() -> Self {
+        OptimizeMode::Complete
+    }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum OptimizeCrit {
-    Balance = 0,  // the maximum balance value, 
-    BalanceProf = 1,  // the maximum value of product of the balance and profitability, 
-    BalancePayoff = 2,  // the product of the balance and expected payoff, 
-    Drawdown = 3,  // the maximum value of the expression (100% - Drawdown)*Balance, 
-    BalanceRecovery = 4,  // the product of the balance and the recovery factor, 
-    BalanceSharpe = 5,  // the product of the balance and the Sharpe Ratio, 
-    Custom = 6,  // a custom optimization criterion received from the OnTester() function in the Expert Advisor).
+    Balance = 0,         // the maximum balance value,
+    BalanceProf = 1,     // the maximum value of product of the balance and profitability,
+    BalancePayoff = 2,   // the product of the balance and expected payoff,
+    Drawdown = 3,        // the maximum value of the expression (100% - Drawdown)*Balance,
+    BalanceRecovery = 4, // the product of the balance and the recovery factor,
+    BalanceSharpe = 5,   // the product of the balance and the Sharpe Ratio,
+    Custom = 6, // a custom optimization criterion received from the OnTester() function in the Expert Advisor).
 }
 
 impl Default for OptimizeCrit {
-    fn default() -> Self { OptimizeCrit::Custom }
+    fn default() -> Self {
+        OptimizeCrit::Custom
+    }
 }
 
 #[cfg(test)]
@@ -400,8 +429,8 @@ mod test {
     //                });
     // }
 
-     #[test]
-     fn input_str_test() {
+    #[test]
+    fn input_str_test() {
         let mut inp = Input::Int(0);
         assert_eq!(inp.type_str(), "Int");
         assert_eq!(inp.value_str(), "0||0||0||0||N");
@@ -410,166 +439,197 @@ mod test {
         assert_eq!(inp.type_str(), "Double");
         assert_eq!(inp.value_str(), "0.00||0||0||0||N");
 
-        inp = Input::IntRange((10,20,1));
+        inp = Input::IntRange((10, 20, 1));
         assert_eq!(inp.type_str(), "Int");
         assert_eq!(inp.value_str(), "0||10||20||1||Y");
 
-        inp = Input::DoubleRange((10.,20.,1.));
+        inp = Input::DoubleRange((10., 20., 1.));
         assert_eq!(inp.type_str(), "Double");
         assert_eq!(inp.value_str(), "0||10.00||20.00||1.00||Y");
-     }
+    }
 
-     #[test]
-     fn indicator_config_test() {
-         let mut indi = Indicator{
-             name : "ama".to_string(),
-             indi_type : "Confirm".to_string(),
-             shift : None,
-             inputs : Vec::new(),
-         };
+    #[test]
+    fn indicator_config_test() {
+        let mut indi = Indicator {
+            name: "ama".to_string(),
+            indi_type: "Confirm".to_string(),
+            shift: None,
+            inputs: Vec::new(),
+        };
         assert_eq!(indi.to_params_config(), "Confirm_Indicator=ama\n");
-        
+
         indi.shift = Some(7);
-        assert_eq!(indi.to_params_config(),
-"Confirm_Indicator=ama
+        assert_eq!(
+            indi.to_params_config(),
+            "Confirm_Indicator=ama
 Confirm_Shift=7
-");
+"
+        );
 
         indi.inputs.push(Input::Int(3));
-        assert_eq!(indi.to_params_config(),
-"Confirm_Indicator=ama
+        assert_eq!(
+            indi.to_params_config(),
+            "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Shift=7
-");
+"
+        );
 
         indi.inputs.push(Input::Int(4));
-        assert_eq!(indi.to_params_config(),
-"Confirm_Indicator=ama
+        assert_eq!(
+            indi.to_params_config(),
+            "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Int1=4||0||0||0||N
 Confirm_Shift=7
-");
+"
+        );
 
         indi.inputs.push(Input::Double(5.));
-        assert_eq!(indi.to_params_config(),
-"Confirm_Indicator=ama
+        assert_eq!(
+            indi.to_params_config(),
+            "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Int1=4||0||0||0||N
 Confirm_Double2=5.00||0||0||0||N
 Confirm_Shift=7
-");
+"
+        );
 
-        indi.inputs.push(Input::IntRange((10,200,5)));
-        assert_eq!(indi.to_params_config(),
-"Confirm_Indicator=ama
+        indi.inputs.push(Input::IntRange((10, 200, 5)));
+        assert_eq!(
+            indi.to_params_config(),
+            "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Int1=4||0||0||0||N
 Confirm_Double2=5.00||0||0||0||N
 Confirm_Int3=0||10||200||5||Y
 Confirm_Shift=7
-");
+"
+        );
 
-        indi.inputs.push(Input::DoubleRange((10.,200.,0.5)));
-        assert_eq!(indi.to_params_config(),
-"Confirm_Indicator=ama
+        indi.inputs.push(Input::DoubleRange((10., 200., 0.5)));
+        assert_eq!(
+            indi.to_params_config(),
+            "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Int1=4||0||0||0||N
 Confirm_Double2=5.00||0||0||0||N
 Confirm_Int3=0||10||200||5||Y
 Confirm_Double4=0||10.00||200.00||0.50||Y
 Confirm_Shift=7
-");
-     }
+"
+        );
+    }
 
-     #[test]
-     fn indi_set_config_test() {
-         let mut indi_set = IndicatorSet{
-             confirm : Some(Indicator{
-                 name : "ama".to_string(),
-                 inputs : vec![Input::Int(3),
-                               Input::DoubleRange((10.,200.,0.5))],
-                 indi_type : "Confirm".to_string(),
-                 .. Default::default()
-             }),
-             ..Default::default()
-         };
-         assert_eq!(indi_set.to_params_config(),
-"Confirm_Indicator=ama
+    #[test]
+    fn indi_set_config_test() {
+        let mut indi_set = IndicatorSet {
+            confirm: Some(Indicator {
+                name: "ama".to_string(),
+                inputs: vec![Input::Int(3), Input::DoubleRange((10., 200., 0.5))],
+                indi_type: "Confirm".to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert_eq!(
+            indi_set.to_params_config(),
+            "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Double1=0||10.00||200.00||0.50||Y
-");
+"
+        );
 
-         indi_set.baseline = Some(Indicator{
-                 name : "bama".to_string(),
-                 inputs : vec![Input::Double(3.),
-                               Input::DoubleRange((10.,200.,0.5))],
-                 indi_type : "Baseline".to_string(),
-                 .. Default::default()
-             });
-         assert_eq!(indi_set.to_params_config(),
-"Confirm_Indicator=ama
+        indi_set.baseline = Some(Indicator {
+            name: "bama".to_string(),
+            inputs: vec![Input::Double(3.), Input::DoubleRange((10., 200., 0.5))],
+            indi_type: "Baseline".to_string(),
+            ..Default::default()
+        });
+        assert_eq!(
+            indi_set.to_params_config(),
+            "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Double1=0||10.00||200.00||0.50||Y
 Baseline_Indicator=bama
 Baseline_Double0=3.00||0||0||0||N
 Baseline_Double1=0||10.00||200.00||0.50||Y
-");
-     }
+"
+        );
+    }
 
+    #[test]
+    fn terminal_config_params_path_test() {
+        let term_params = CommonParams {
+            workdir: PathBuf::from(r"C:/workdir"),
+            params_file: "test.set".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            term_params.params_path().as_path(),
+            Path::new("C:/workdir/MQL5/Profiles/Tester/test.set")
+        );
 
-     #[test]
-     fn terminal_config_params_path_test() {
-         let term_params = CommonParams {
-             workdir : PathBuf::from(r"C:/workdir"),
-             params_file : "test.set".to_string(),
-             .. Default::default()
-         };
-         assert_eq!(term_params.params_path().as_path(),
-                    Path::new("C:/workdir/MQL5/Profiles/Tester/test.set")
-         );
-
-         let term_params = CommonParams::new(
-             Path::new("C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075"));
-         assert_eq!(term_params.params_path().as_path(),
+        let term_params = CommonParams::new(Path::new(
+            "C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075",
+        ));
+        assert_eq!(term_params.params_path().as_path(),
                     Path::new("C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Profiles/Tester/expert_params.set")
          );
-     }
+    }
 
-     #[test]
-     fn reports_dir_test() {
-         let common = CommonParams::new(Path::new("C:/workdir"));
-         let mut run = RunParams::new();
-         run.name = "test".to_string();
-         assert_eq!(reports_dir(&common , &run).as_path(),
-                    PathBuf::from("C:/workdir/reports/").join("test"));
+    #[test]
+    fn reports_dir_test() {
+        let common = CommonParams::new(Path::new("C:/workdir"));
+        let mut run = RunParams::new();
+        run.name = "test".to_string();
+        assert_eq!(
+            get_reports_dir(&common, &run).as_path(),
+            PathBuf::from("C:/workdir/reports/").join("test")
+        );
 
-         let mut reports_path = reports_dir(&common, &run).join("USDCHF");
-         reports_path.set_extension("xml");
-         let reports_path = reports_path.as_os_str();
+        let mut reports_path = get_reports_dir(&common, &run).join("USDCHF");
+        reports_path.set_extension("xml");
+        let reports_path = reports_path.as_os_str();
 
-         assert_eq!(reports_path.to_string_lossy(),
-                    "C:/workdir/reports/test/USDCHF.xml");
-     }
+        assert_eq!(
+            reports_path.to_string_lossy(),
+            "C:/workdir/reports/test/USDCHF.xml"
+        );
 
-     #[test]
-     fn run_iter_test() {
-         let mut run = RunParams::new();
-         run.symbols = vec!["USDCHF", "USDJPY", "USDCAD"].iter().map(|s| s.to_string()).collect();
-         let mut sym_iter = run.iter();
-         assert_eq!(sym_iter.next().unwrap(), "USDCHF");
-         assert_eq!(sym_iter.next().unwrap(), "USDJPY");
-     }
+        assert_eq!(
+            (*get_reports_path(&common, &run, &"USDCHF".to_string())).to_str(),
+            Some("C:/workdir/reports/test/USDCHF.xml")
+        );
+    }
 
-     #[test]
-     fn to_terminal_config_test() {
-         let common = CommonParams::new(Path::new("C:/workdir"));
-         let mut run = RunParams::new();
-         run.symbols = vec!["USDCHF", "USDJPY", "USDCAD"].iter().map(|s| s.to_string()).collect();
-         run.name = "test".to_string();
-         let mut sym_iter = run.iter();
+    #[test]
+    fn run_iter_test() {
+        let mut run = RunParams::new();
+        run.symbols = vec!["USDCHF", "USDJPY", "USDCAD"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let mut sym_iter = run.iter();
+        assert_eq!(sym_iter.next().unwrap(), "USDCHF");
+        assert_eq!(sym_iter.next().unwrap(), "USDJPY");
+    }
 
-         assert_eq!(to_terminal_config(&common, &run , sym_iter.next().unwrap()),
-"[Tester]
+    #[test]
+    fn to_terminal_config_test() {
+        let common = CommonParams::new(Path::new("C:/workdir"));
+        let mut run = RunParams::new();
+        run.symbols = vec!["USDCHF", "USDJPY", "USDCAD"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        run.name = "test".to_string();
+        let mut sym_iter = run.iter();
+
+        assert_eq!(
+            to_terminal_config(&common, &run, sym_iter.next().unwrap()),
+            "[Tester]
 
 Expert=expert/expert.ex5
 ExpertParameters=expert_params.set
@@ -592,6 +652,60 @@ Optimization=1
 OptimizationCriterion=6
 Symbol=USDCHF
 Report=C:/workdir/reports/test/USDCHF.xml"
-         ); 
-     }
+        );
+    }
+
+    #[test]
+    fn json_test() {
+        let workdir = Path::new("C:/workdir");
+        let term_params = CommonParams {
+            params_file: "expert_params.set".to_string(),
+            terminal_exe: PathBuf::from(r"C:/terminal64.exe"),
+            workdir: workdir.to_path_buf(),
+            reports: workdir.join("reports"),
+            expert: "expert/expert.ex5".to_string(),
+            period: "D1".to_string(),
+            login: "".to_string(),
+            use_remote: true,
+            use_local: true,
+            replace_report: true,
+            shutdown_terminal: true,
+            deposit: 10000,
+            currency: "USD".to_string(),
+            leverage: 100,
+            execution_mode: 0,
+        };
+
+        let j = json! ({"params_file":"expert_params.set",
+                       "terminal_exe":"C:/terminal64.exe",
+                       "workdir":"C:/workdir",
+                       "reports":"C:/workdir/reports",
+                       "expert":"expert/expert.ex5",
+                       "period":"D1",
+                       "login":"",
+                       "use_remote":true,
+                       "use_local":true,
+                       "replace_report":true,
+                       "shutdown_terminal":true,
+                       "deposit":10000,
+                       "currency":"USD",
+                       "leverage":100,
+                       "execution_mode":0});
+        let c = serde_json::from_value(j).unwrap();
+        assert_eq!(term_params, c);
+
+        let run = RunParams {
+            name: "backtest".to_string(),
+            indi_set: IndicatorSet::default(),
+            date: ("2017.08.01".to_string(), "2019.08.20".to_string()),
+            backtest_model: BacktestModel::default(),
+            optimize: OptimizeMode::default(),
+            optimize_crit: OptimizeCrit::default(),
+            visual: false,
+            symbols: FOREX_PAIRS.iter().map(|s| s.to_string()).collect(),
+            // to_vec().to_string(),
+            // symbols_iter : symbols.iter()
+        }
+
+    }
 }

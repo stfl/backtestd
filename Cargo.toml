@@ -18,6 +18,7 @@ quick-xml = "0.17.0"
 serde = "*"
 serde_json = "*"
 serde_derive = "*"
+serde_repr = "0.1"
 
 snafu = "0.6.0"
 

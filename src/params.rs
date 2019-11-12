@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{self, json};
+use serde_repr::{Serialize_repr, Deserialize_repr};
 
 const FOREX_PAIRS: &'static [&'static str] = &[
     "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
@@ -21,35 +22,48 @@ const FOREX_PAIRS: &'static [&'static str] = &[
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Indicator {
     name: String,
-    indi_type: String,
+    indi_type: IndicatorType,
     inputs: Vec<Input>,
-    shift: Option<u8>,
+    shift: u8,
 }
 
 impl Indicator {
     // maybe implement io::Write instead?
-    pub fn to_params_config(&self) -> String {
+    pub fn to_params_config<'a>(&self, use_case: &'a str) -> String {
         let mut string: String = format!(
-            "{indi_type}_Indicator={name}\n",
-            indi_type = self.indi_type,
+            "{use_case}_Indicator={name}\n",
+            use_case = use_case,
             name = self.name
         );
         for (i, inp) in self.inputs.iter().enumerate() {
             string.push_str(&format!(
-                "{indi_type}_{input_type}{idx}=\
+                "{use_case}_{input_type}{idx}=\
                  {input_value}\n",
-                indi_type = self.indi_type,
+                use_case = use_case,
                 input_type = inp.type_str(),
                 input_value = inp.value_str(),
                 idx = i,
             ));
         }
-        match self.shift {
-            Some(a) => string.push_str(&format!("{}_Shift={}\n", self.indi_type, a)),
-            _ => {}
+        if self.shift >0 {
+            string.push_str(&format!("{}_Shift={}\n", use_case, self.shift));
         }
 
         string
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize_repr, Deserialize_repr)]
+#[repr(u8)]
+pub enum IndicatorType {
+    ZeroLineCross = 0,
+    TwoLineCross = 1,
+    OnChart = 2,
+}
+
+impl Default for IndicatorType {
+    fn default() -> Self {
+        IndicatorType::ZeroLineCross
     }
 }
 
@@ -94,31 +108,31 @@ impl IndicatorSet {
     fn to_params_config(&self) -> String {
         let mut string = String::new();
         match &self.confirm {
-            Some(i) => string.push_str(&i.to_params_config()),
+            Some(i) => string.push_str(&i.to_params_config("Confirm")),
             _ => {}
         }
         match &self.confirm2 {
-            Some(i) => string.push_str(&i.to_params_config()),
+            Some(i) => string.push_str(&i.to_params_config("Confirm2")),
             _ => {}
         }
         match &self.confirm3 {
-            Some(i) => string.push_str(&i.to_params_config()),
+            Some(i) => string.push_str(&i.to_params_config("Confirm3")),
             _ => {}
         }
         match &self.cont {
-            Some(i) => string.push_str(&i.to_params_config()),
+            Some(i) => string.push_str(&i.to_params_config("Continue")),
             _ => {}
         }
         match &self.exit {
-            Some(i) => string.push_str(&i.to_params_config()),
+            Some(i) => string.push_str(&i.to_params_config("Exit")),
             _ => {}
         }
         match &self.baseline {
-            Some(i) => string.push_str(&i.to_params_config()),
+            Some(i) => string.push_str(&i.to_params_config("Baseline")),
             _ => {}
         }
         match &self.volume {
-            Some(i) => string.push_str(&i.to_params_config()),
+            Some(i) => string.push_str(&i.to_params_config("Volume")),
             _ => {}
         }
 
@@ -350,7 +364,7 @@ pub fn get_reports_path(common: &CommonParams, run: &RunParams, symbol: &String)
 // }
 
 
-#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Copy, Clone, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum BacktestModel {
     EveryTick = 0,     // "Every tick"
@@ -368,7 +382,7 @@ impl Default for BacktestModel {
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Copy, Clone, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum OptimizeMode {
     Disabled = 0,   // optimization disabled
@@ -383,7 +397,7 @@ impl Default for OptimizeMode {
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Copy, Clone, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum OptimizeCrit {
     Balance = 0,         // the maximum balance value,
@@ -452,15 +466,15 @@ mod test {
     fn indicator_config_test() {
         let mut indi = Indicator {
             name: "ama".to_string(),
-            indi_type: "Confirm".to_string(),
-            shift: None,
+            indi_type: IndicatorType::OnChart,
+            shift: 0,
             inputs: Vec::new(),
         };
-        assert_eq!(indi.to_params_config(), "Confirm_Indicator=ama\n");
+        assert_eq!(indi.to_params_config("Confirm"), "Confirm_Indicator=ama\n");
 
-        indi.shift = Some(7);
+        indi.shift = 7;
         assert_eq!(
-            indi.to_params_config(),
+            indi.to_params_config("Confirm"),
             "Confirm_Indicator=ama
 Confirm_Shift=7
 "
@@ -468,7 +482,7 @@ Confirm_Shift=7
 
         indi.inputs.push(Input::Int(3));
         assert_eq!(
-            indi.to_params_config(),
+            indi.to_params_config("Confirm"),
             "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Shift=7
@@ -477,7 +491,7 @@ Confirm_Shift=7
 
         indi.inputs.push(Input::Int(4));
         assert_eq!(
-            indi.to_params_config(),
+            indi.to_params_config("Confirm"),
             "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Int1=4||0||0||0||N
@@ -487,7 +501,7 @@ Confirm_Shift=7
 
         indi.inputs.push(Input::Double(5.));
         assert_eq!(
-            indi.to_params_config(),
+            indi.to_params_config("Confirm"),
             "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Int1=4||0||0||0||N
@@ -498,7 +512,7 @@ Confirm_Shift=7
 
         indi.inputs.push(Input::IntRange((10, 200, 5)));
         assert_eq!(
-            indi.to_params_config(),
+            indi.to_params_config("Confirm"),
             "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Int1=4||0||0||0||N
@@ -510,7 +524,7 @@ Confirm_Shift=7
 
         indi.inputs.push(Input::DoubleRange((10., 200., 0.5)));
         assert_eq!(
-            indi.to_params_config(),
+            indi.to_params_config("Confirm"),
             "Confirm_Indicator=ama
 Confirm_Int0=3||0||0||0||N
 Confirm_Int1=4||0||0||0||N
@@ -528,7 +542,7 @@ Confirm_Shift=7
             confirm: Some(Indicator {
                 name: "ama".to_string(),
                 inputs: vec![Input::Int(3), Input::DoubleRange((10., 200., 0.5))],
-                indi_type: "Confirm".to_string(),
+                indi_type: IndicatorType::OnChart,
                 ..Default::default()
             }),
             ..Default::default()
@@ -544,7 +558,7 @@ Confirm_Double1=0||10.00||200.00||0.50||Y
         indi_set.baseline = Some(Indicator {
             name: "bama".to_string(),
             inputs: vec![Input::Double(3.), Input::DoubleRange((10., 200., 0.5))],
-            indi_type: "Baseline".to_string(),
+            indi_type: IndicatorType::ZeroLineCross,
             ..Default::default()
         });
         assert_eq!(
@@ -696,16 +710,47 @@ Report=C:/workdir/reports/test/USDCHF.xml"
 
         let run = RunParams {
             name: "backtest".to_string(),
-            indi_set: IndicatorSet::default(),
+            indi_set: IndicatorSet {
+                confirm: Some(Indicator {
+                    name: "ma".to_string(),
+                    indi_type: IndicatorType::ZeroLineCross,
+                    inputs: vec![Input::Int(3), Input::DoubleRange((10., 200., 0.5))],
+                    shift: 0,
+                }),
+                confirm2: Some(Indicator {
+                    name: "ma2".to_string(),
+                    indi_type: IndicatorType::ZeroLineCross,
+                    inputs: vec![Input::Double(3.), Input::IntRange((10, 200, 5))],
+                    shift: 1
+                }),
+                confirm3: None,
+                exit: Some(Indicator {
+                    name: "exitor".to_string(),
+                    indi_type: IndicatorType::TwoLineCross,
+                    inputs: vec![Input::Int(8), Input::IntRange((1, 20, 2))],
+                    shift: 2
+                }),
+                cont: None,
+                baseline: Some(Indicator {
+                    name: "Ichy".to_string(),
+                    indi_type: IndicatorType::OnChart,
+                    inputs: vec![Input::Int(8), Input::IntRange((1, 20, 2))],
+                    shift: 0
+                }),
+                volume: Some(Indicator {
+                    name: "WAE".to_string(),
+                    indi_type: IndicatorType::ZeroLineCross,
+                    inputs: vec![Input::Double(8.8), Input::IntRange((4, 11, 1))],
+                    shift: 0
+                }),
+            },
             date: ("2017.08.01".to_string(), "2019.08.20".to_string()),
-            backtest_model: BacktestModel::default(),
-            optimize: OptimizeMode::default(),
-            optimize_crit: OptimizeCrit::default(),
+            backtest_model: BacktestModel::EveryTick,
+            optimize: OptimizeMode::Complete,
+            optimize_crit: OptimizeCrit::Custom,
             visual: false,
-            symbols: FOREX_PAIRS.iter().map(|s| s.to_string()).collect(),
-            // to_vec().to_string(),
-            // symbols_iter : symbols.iter()
-        }
-
+            symbols: vec!["EURUSD".to_string(), "AUDCAD".into()],
+        };
+        println!("{}", serde_json::to_string_pretty(&run).unwrap());
     }
 }

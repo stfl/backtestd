@@ -8,9 +8,10 @@ use std::path::Path;
 // use std::string::String::from_utf8_lossy;
 use std::borrow::Cow;
 
-extern crate serde_derive;
+use anyhow::{Context, Result};
 
-use snafu::{Backtrace, ResultExt, Snafu};
+use serde_derive;
+
 use std::{fs, io, path::PathBuf};
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -60,9 +61,9 @@ pub struct ResultRow {
 impl ResultRow {
     pub fn try_from_vec(vec: &Vec<String>) -> Result<ResultRow> {
         let row = ResultRow {
-            profit: vec[2].parse().context(ParseFloatError { txt: &vec[2] })?,
-            result: vec[7].parse().context(ParseFloatError { txt: &vec[7] })?,
-            trades: vec[9].parse().context(ParseIntError { txt: &vec[9] })?,
+            profit: vec[2].parse().context("Parsing Numeric failed")?,
+            result: vec[7].parse().context("Parsing Numeric failed")?,
+            trades: vec[9].parse().context("Parsing Numeric failed")?,
             input_params: vec[10..].iter().map(|s| s.parse().unwrap()).collect(),
             // TODO identify the input_params_set and store the hash or sth
             // generate a reproducable hash xxHash?
@@ -71,47 +72,9 @@ impl ResultRow {
     }
 }
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Unable to parse value from xml file {} {}", txt, source))]
-    ParseFloatError {
-        txt: String,
-        source: std::num::ParseFloatError,
-    },
-    #[snafu(display("Unable to parse value from xml file {} {}", txt, source))]
-    ParseIntError {
-        txt: String,
-        source: std::num::ParseIntError,
-    },
-    #[snafu(display("Unable to read xml file {} {}", file.display(), source))]
-    XmlFileError {
-        file: PathBuf,
-        source: quick_xml::Error,
-    },
-
-    #[snafu(display("Unable to decode in xml {}", source))]
-    XmlDecodeError { source: std::str::Utf8Error },
-
-    #[snafu(display("Unable to decode in xml {}", source))]
-    QuickXmlError { source: quick_xml::Error },
-
-    #[snafu(display("Error reading xml"))]
-    XmlError,
-}
-
-type Result<T, E = Error> = std::result::Result<T, E>;
-
-// fn process_data() -> Result<()> {
-//     let path = "config.toml";
-//     let configuration = fs::read_to_string(path).context(ReadConfiguration { path })?;
-//     let path = unpack_config(&configuration);
-//     fs::write(&path, b"My complex calculation").context(WriteResult { path })?;
-//     Ok(())
-// }
-
 pub fn read_results_xml(results_file: PathBuf) -> Result<Vec<ResultRow>> {
     let mut report_reader =
-        Reader::from_file(results_file.as_path()).context(XmlFileError { file: results_file })?;
+        Reader::from_file(results_file.as_path())?;
     report_reader.trim_text(true);
     let mut count = 0;
     let mut buf = Vec::new();
@@ -120,10 +83,10 @@ pub fn read_results_xml(results_file: PathBuf) -> Result<Vec<ResultRow>> {
     loop {
         match report_reader
             .read_event(&mut buf)
-            .context(QuickXmlError {})?
+            .context("Failed to decode XML")?
         {
             Event::Start(ref e) => {
-                match std::str::from_utf8(e.local_name()).context(XmlDecodeError {})? {
+                match std::str::from_utf8(e.local_name()).context("Failed to decode XML")? {
                     "Row" => {
                         count += 1;
                         txt.clear(); // delete the values but keep the capacity
@@ -132,7 +95,7 @@ pub fn read_results_xml(results_file: PathBuf) -> Result<Vec<ResultRow>> {
                 }
             }
             Event::End(ref e) => {
-                match std::str::from_utf8(e.local_name()).context(XmlDecodeError {})? {
+                match std::str::from_utf8(e.local_name()).context("Failed to decode XML")? {
                     "Row" => {
                         if count > 1 {
                             // ignore the header row
@@ -144,7 +107,7 @@ pub fn read_results_xml(results_file: PathBuf) -> Result<Vec<ResultRow>> {
             }
             Event::Text(e) => txt.push(
                 e.unescape_and_decode(&report_reader)
-                    .context(QuickXmlError {})?,
+                    .context("Failed to decode XML")?,
             ),
             Event::Eof => break,
             _ => (),
@@ -152,9 +115,7 @@ pub fn read_results_xml(results_file: PathBuf) -> Result<Vec<ResultRow>> {
         buf.clear();
     }
 
-    if count - 1 != rows.len() {
-        return XmlError.fail();
-    }
+    ensure!(count - 1 == rows.len(), "something went wrong with the row count");
     Ok(rows)
 }
 

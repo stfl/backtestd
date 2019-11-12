@@ -12,35 +12,12 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::path::PathBuf;
 
-use snafu::{Backtrace, ResultExt, Snafu};
+use anyhow::{Context, Result};
 
 // use heim_common::prelude::futures::stream::*;
 // use futures::prelude::*;
 use std::process::{Child, Command, ExitStatus};
 // use heim::process::Process;
-
-/* impl From<io::Error> for Error::IoError {
- *     fn from(err: io::Error) -> Self {
- *         Error::IoError::new(err.description())
- *     }
- * } */
-
-/* impl From<xml_reader::Error> for XmlReaderError {
- *     fn from(err: xml_reader::Error) -> Self {
- *         XmlReaderError::new(err.description())
- *     }
- * } */
-
-#[derive(Debug, Snafu)]
-pub enum Error {
-    // #[snafu(display("{}", description))]
-    IoError { source: io::Error },
-
-    // #[snafu(display(""))]
-    XmlReaderError { source: xml_reader::Error },
-}
-
-type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Debug)]
 pub struct BacktestRunner {
@@ -63,9 +40,8 @@ impl BacktestRunner {
 
     fn write_indi_params(&self) -> Result<()> {
         // TODO mkdir
-        let mut file = File::create(self.common.params_path()).context(IoError)?;
-        file.write_all(self.run.to_params_config().as_bytes())
-            .context(IoError {})?;
+        let mut file = File::create(self.common.params_path())?;
+        file.write_all(self.run.to_params_config().unwrap().as_bytes())?;
         Ok(())
     }
 
@@ -76,32 +52,18 @@ impl BacktestRunner {
         Ok(())
     }
 
-    /* fn run_terminal(&mut self) -> Result<(), io::Error> {
-     *     let mut terminal_cmd = Command::new(self.common.terminal_exe.to_str()
-     *                                         .expect(format!("terminal_exe {:?} cannot convert to str", self.common.terminal_exe).as_str()));
-     *     self.process = Some(terminal_cmd.spawn()?);
-     *     Ok(())
-     * } */
-
-    fn run_terminal(&self) -> Result<ExitStatus, io::Error> {
+    fn run_terminal(&self) -> Result<ExitStatus> {
         Command::new(
-            self.common.terminal_exe.to_str().expect(
-                format!(
-                    "terminal_exe {:?} cannot convert to str",
-                    self.common.terminal_exe
-                )
-                .as_str(),
-            ),
-        )
-        .status()
+            self.common.terminal_exe.to_str().context("conversion error for terminal.exe")?)
+        .status().context("Terminal Command execution failed")
     }
 
     pub async fn run_backtest(&self) -> Result<bool> {
         for symbol in self.run.symbols.iter() {
-            self.write_terminal_config(&symbol).context(IoError)?;
-            self.run_terminal().context(IoError)?;
-            let results = self.collect_results(&symbol).context(XmlReaderError)?;
-            self.delete_results(&symbol).context(IoError)?;
+            self.write_terminal_config(&symbol)?;
+            self.run_terminal()?;
+            let results = self.collect_results(&symbol)?;
+            self.delete_results(&symbol)?;
         }
         // self.push_results_to_database().context(DbError)?;
         Ok(true)
@@ -113,7 +75,7 @@ impl BacktestRunner {
         Ok(())
     }
 
-    fn collect_results(&self, symbol: &String) -> Result<Vec<ResultRow>, xml_reader::Error> {
+    fn collect_results(&self, symbol: &String) -> Result<Vec<ResultRow>> {
         Ok(read_results_xml(get_reports_path(
             &self.common,
             &self.run,

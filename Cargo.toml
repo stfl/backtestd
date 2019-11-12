@@ -20,7 +20,7 @@ serde_json = "*"
 serde_derive = "*"
 serde_repr = "0.1"
 
-snafu = "0.6.0"
+anyhow = "1.0"
 
 heim = "0.0.8"
 heim-common = "0.0.8"

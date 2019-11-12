@@ -5,12 +5,11 @@ use std::ffi::{OsStr, OsString};
 use std::io;
 use std::path::{Path, PathBuf};
 
-// extern crate serde;
-// extern crate serde_json;
+use anyhow::{Context, Result};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{self, json};
-use serde_repr::{Serialize_repr, Deserialize_repr};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
 const FOREX_PAIRS: &'static [&'static str] = &[
     "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
@@ -23,13 +22,13 @@ const FOREX_PAIRS: &'static [&'static str] = &[
 pub struct Indicator {
     name: String,
     indi_type: IndicatorType,
-    inputs: Vec<Input>,
+    inputs: Vec<Vec<f32>>,
     shift: u8,
 }
 
 impl Indicator {
     // maybe implement io::Write instead?
-    pub fn to_params_config<'a>(&self, use_case: &'a str) -> String {
+    pub fn to_params_config<'a>(&self, use_case: &'a str) -> Result<String> {
         let mut string: String = format!(
             "{use_case}_Indicator={name}\n",
             use_case = use_case,
@@ -37,19 +36,19 @@ impl Indicator {
         );
         for (i, inp) in self.inputs.iter().enumerate() {
             string.push_str(&format!(
-                "{use_case}_{input_type}{idx}=\
+                // TODO remove _Double
+                "{use_case}_Double{idx}=\
                  {input_value}\n",
                 use_case = use_case,
-                input_type = inp.type_str(),
-                input_value = inp.value_str(),
+                input_value = input_param_str(inp)?,
                 idx = i,
             ));
         }
-        if self.shift >0 {
+        if self.shift > 0 {
             string.push_str(&format!("{}_Shift={}\n", use_case, self.shift));
         }
 
-        string
+        Ok(string)
     }
 }
 
@@ -67,29 +66,14 @@ impl Default for IndicatorType {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub enum Input {
-    Int(i32),
-    Double(f32),
-    IntRange((i32, i32, i32)),
-    DoubleRange((f32, f32, f32)),
-}
-
-impl Input {
-    fn type_str(&self) -> &str {
-        match self {
-            Input::Int(_) | Input::IntRange(_) => "Int",
-            Input::Double(_) | Input::DoubleRange(_) => "Double",
-        }
-    }
-
-    fn value_str(&self) -> String {
-        match self {
-            Input::Int(a) => format!("{}||0||0||0||N", a),
-            Input::Double(a) => format!("{:.2}||0||0||0||N", a),
-            Input::IntRange(a) => format!("0||{}||{}||{}||Y", a.0, a.1, a.2),
-            Input::DoubleRange(a) => format!("0||{:.2}||{:.2}||{:.2}||Y", a.0, a.1, a.2),
-        }
+fn input_param_str(input: &Vec<f32>) -> Result<String> {
+    match input.len() {
+        1 => Ok(format!("{:.2}||0||0||0||N", input[0] as f32)),
+        3 => Ok(format!(
+            "0||{:.2}||{:.2}||{:.2}||Y",
+            input[0] as f32, input[1] as f32, input[2] as f32
+        )),
+        e => Err(anyhow!("wrong length of input: {}", e)),
     }
 }
 
@@ -105,38 +89,38 @@ pub struct IndicatorSet {
 }
 
 impl IndicatorSet {
-    fn to_params_config(&self) -> String {
+    fn to_params_config(&self) -> Result<String> {
         let mut string = String::new();
         match &self.confirm {
-            Some(i) => string.push_str(&i.to_params_config("Confirm")),
-            _ => {}
+            Some(i) => string.push_str(&i.to_params_config("Confirm")?),
+            _ => (),
         }
         match &self.confirm2 {
-            Some(i) => string.push_str(&i.to_params_config("Confirm2")),
-            _ => {}
+            Some(i) => string.push_str(&i.to_params_config("Confirm2")?),
+            _ => (),
         }
         match &self.confirm3 {
-            Some(i) => string.push_str(&i.to_params_config("Confirm3")),
-            _ => {}
+            Some(i) => string.push_str(&i.to_params_config("Confirm3")?),
+            _ => (),
         }
         match &self.cont {
-            Some(i) => string.push_str(&i.to_params_config("Continue")),
-            _ => {}
+            Some(i) => string.push_str(&i.to_params_config("Continue")?),
+            _ => (),
         }
         match &self.exit {
-            Some(i) => string.push_str(&i.to_params_config("Exit")),
-            _ => {}
+            Some(i) => string.push_str(&i.to_params_config("Exit")?),
+            _ => (),
         }
         match &self.baseline {
-            Some(i) => string.push_str(&i.to_params_config("Baseline")),
-            _ => {}
+            Some(i) => string.push_str(&i.to_params_config("Baseline")?),
+            _ => (),
         }
         match &self.volume {
-            Some(i) => string.push_str(&i.to_params_config("Volume")),
-            _ => {}
+            Some(i) => string.push_str(&i.to_params_config("Volume")?),
+            _ => (),
         }
 
-        string
+        Ok(string)
     }
 }
 
@@ -155,8 +139,8 @@ pub struct RunParams {
 }
 
 impl RunParams {
-    pub fn to_params_config(&self) -> String {
-        return self.indi_set.to_params_config();
+    pub fn to_params_config(&self) -> Result<String> {
+        return Ok(self.indi_set.to_params_config()?);
     }
 
     fn to_config(&self) -> String {
@@ -318,51 +302,7 @@ pub fn get_reports_path(common: &CommonParams, run: &RunParams, symbol: &String)
     let mut reports_path = get_reports_dir(&common, &run).join(symbol);
     reports_path.set_extension("xml");
     reports_path
-
-    // reports_path.into_os_string()
 }
-
-/* Expert={expert}
- * ExpertParameters={params_file}
- * Period={period}
- * Login={login}
- * Visual={visual}
- * UseLocal={use_local}
- * UseRemote={use_remote}
- * FromDate={from_date}
- * ToDate={to_date}
- * ReplaceReport={replace_report}
- * ShutdownTerminal={shutdown_terminal}
- * Deposit={deposit}
- * Currency={currency}
- * Leverage={leverage}
- * Model={model}
- * ExecutionMode={exec_mode}
- * Optimization={opti}
- * OptimizationCriterion={opti_crit}
- * ",
- * expert = terminal_params.expert,
- * params_file = terminal_params.params_file,
- * // symbol = run_params.next(),
- * period = terminal_params.period,
- * login = terminal_params.login,
- * visual = run_params.visual as i32,
- * use_local = terminal_params.use_local as i32,
- * use_remote = terminal_params.use_remote as i32,
- * from_date = run_params.date.0,
- * to_date = run_params.date.1,
- * replace_report = terminal_params.replace_report as i32,
- * shutdown_terminal = terminal_params.shutdown_terminal as i32,
- * deposit = terminal_params.deposit,
- * currency = terminal_params.currency,
- * leverage = terminal_params.leverage,
- * model = run_params.backtest_model as u8,
- * exec_mode = terminal_params.execution_mode,
- * opti = run_params.optimize as u8,
- * opti_crit = run_params.optimize_crit as u8,
- * ) */
-// }
-
 
 #[derive(Debug, PartialEq, Copy, Clone, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
@@ -420,48 +360,6 @@ mod test {
     use super::*;
     use std::path::Path;
 
-    // #[test]
-    // fn write_config_test() {
-    //     let mut terminal_params : CommonParams = Default::default();
-    //     assert_eq!(terminal_params,
-    //                CommonParams{
-    //                    params_file : "expert_params.set".to_string(),
-    //                    terminal_exe : PathBuf::new(),
-    //                    workdir : PathBuf::new(),
-    //                    reports : "".to_string(),
-    //                    expert : "".to_string(),
-    //                    period : "".to_string(),
-    //                    login : "".to_string(),
-    //                    use_remote : false,
-    //                    use_local : false,
-    //                    replace_report : false,
-    //                    shutdown_terminal : false,
-    //                    deposit : 0,
-    //                    currency : "".to_string(),
-    //                    leverage : 0,
-    //                    execution_mode : 0,
-    //                });
-    // }
-
-    #[test]
-    fn input_str_test() {
-        let mut inp = Input::Int(0);
-        assert_eq!(inp.type_str(), "Int");
-        assert_eq!(inp.value_str(), "0||0||0||0||N");
-
-        inp = Input::Double(0.);
-        assert_eq!(inp.type_str(), "Double");
-        assert_eq!(inp.value_str(), "0.00||0||0||0||N");
-
-        inp = Input::IntRange((10, 20, 1));
-        assert_eq!(inp.type_str(), "Int");
-        assert_eq!(inp.value_str(), "0||10||20||1||Y");
-
-        inp = Input::DoubleRange((10., 20., 1.));
-        assert_eq!(inp.type_str(), "Double");
-        assert_eq!(inp.value_str(), "0||10.00||20.00||1.00||Y");
-    }
-
     #[test]
     fn indicator_config_test() {
         let mut indi = Indicator {
@@ -470,107 +368,51 @@ mod test {
             shift: 0,
             inputs: Vec::new(),
         };
-        assert_eq!(indi.to_params_config("Confirm"), "Confirm_Indicator=ama\n");
+        assert_eq!(
+            indi.to_params_config("Confirm").unwrap(),
+            "Confirm_Indicator=ama\n"
+        );
 
         indi.shift = 7;
         assert_eq!(
-            indi.to_params_config("Confirm"),
+            indi.to_params_config("Confirm").unwrap(),
             "Confirm_Indicator=ama
 Confirm_Shift=7
 "
         );
 
-        indi.inputs.push(Input::Int(3));
+        indi.inputs.push(vec![3.]);
         assert_eq!(
-            indi.to_params_config("Confirm"),
+            indi.to_params_config("Confirm").unwrap(),
             "Confirm_Indicator=ama
-Confirm_Int0=3||0||0||0||N
+Confirm_Double0=3.00||0||0||0||N
 Confirm_Shift=7
 "
         );
 
-        indi.inputs.push(Input::Int(4));
+        indi.inputs.push(vec![4.]);
         assert_eq!(
-            indi.to_params_config("Confirm"),
+            indi.to_params_config("Confirm").unwrap(),
             "Confirm_Indicator=ama
-Confirm_Int0=3||0||0||0||N
-Confirm_Int1=4||0||0||0||N
+Confirm_Double0=3.00||0||0||0||N
+Confirm_Double1=4.00||0||0||0||N
 Confirm_Shift=7
 "
         );
 
-        indi.inputs.push(Input::Double(5.));
+        indi.inputs.push(vec![10., 200., 0.5]);
         assert_eq!(
-            indi.to_params_config("Confirm"),
-            "Confirm_Indicator=ama
-Confirm_Int0=3||0||0||0||N
-Confirm_Int1=4||0||0||0||N
-Confirm_Double2=5.00||0||0||0||N
-Confirm_Shift=7
-"
-        );
-
-        indi.inputs.push(Input::IntRange((10, 200, 5)));
-        assert_eq!(
-            indi.to_params_config("Confirm"),
-            "Confirm_Indicator=ama
-Confirm_Int0=3||0||0||0||N
-Confirm_Int1=4||0||0||0||N
-Confirm_Double2=5.00||0||0||0||N
-Confirm_Int3=0||10||200||5||Y
-Confirm_Shift=7
-"
-        );
-
-        indi.inputs.push(Input::DoubleRange((10., 200., 0.5)));
-        assert_eq!(
-            indi.to_params_config("Confirm"),
-            "Confirm_Indicator=ama
-Confirm_Int0=3||0||0||0||N
-Confirm_Int1=4||0||0||0||N
-Confirm_Double2=5.00||0||0||0||N
-Confirm_Int3=0||10||200||5||Y
-Confirm_Double4=0||10.00||200.00||0.50||Y
-Confirm_Shift=7
-"
-        );
-    }
-
-    #[test]
-    fn indi_set_config_test() {
-        let mut indi_set = IndicatorSet {
-            confirm: Some(Indicator {
-                name: "ama".to_string(),
-                inputs: vec![Input::Int(3), Input::DoubleRange((10., 200., 0.5))],
-                indi_type: IndicatorType::OnChart,
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-        assert_eq!(
-            indi_set.to_params_config(),
-            "Confirm_Indicator=ama
-Confirm_Int0=3||0||0||0||N
-Confirm_Double1=0||10.00||200.00||0.50||Y
-"
-        );
-
-        indi_set.baseline = Some(Indicator {
-            name: "bama".to_string(),
-            inputs: vec![Input::Double(3.), Input::DoubleRange((10., 200., 0.5))],
-            indi_type: IndicatorType::ZeroLineCross,
-            ..Default::default()
-        });
-        assert_eq!(
-            indi_set.to_params_config(),
-            "Confirm_Indicator=ama
-Confirm_Int0=3||0||0||0||N
-Confirm_Double1=0||10.00||200.00||0.50||Y
-Baseline_Indicator=bama
+            indi.to_params_config("Baseline").unwrap(),
+            "Baseline_Indicator=ama
 Baseline_Double0=3.00||0||0||0||N
-Baseline_Double1=0||10.00||200.00||0.50||Y
+Baseline_Double1=4.00||0||0||0||N
+Baseline_Double2=0||10.00||200.00||0.50||Y
+Baseline_Shift=7
 "
         );
+
+        indi.inputs.push(vec![10., 0.5]);
+        assert!(indi.to_params_config("Baseline").is_err());
     }
 
     #[test]
@@ -690,7 +532,7 @@ Report=C:/workdir/reports/test/USDCHF.xml"
             execution_mode: 0,
         };
 
-        let j = json! ({"params_file":"expert_params.set",
+        let j = r#"{"params_file":"expert_params.set",
                        "terminal_exe":"C:/terminal64.exe",
                        "workdir":"C:/workdir",
                        "reports":"C:/workdir/reports",
@@ -704,44 +546,44 @@ Report=C:/workdir/reports/test/USDCHF.xml"
                        "deposit":10000,
                        "currency":"USD",
                        "leverage":100,
-                       "execution_mode":0});
-        let c = serde_json::from_value(j).unwrap();
-        assert_eq!(term_params, c);
+                       "execution_mode":0}
+                "#;
+        assert_eq!(term_params, serde_json::from_str(j).unwrap());
 
         let run = RunParams {
-            name: "backtest".to_string(),
+            name: "bt_run_name".to_string(),
             indi_set: IndicatorSet {
                 confirm: Some(Indicator {
                     name: "ma".to_string(),
                     indi_type: IndicatorType::ZeroLineCross,
-                    inputs: vec![Input::Int(3), Input::DoubleRange((10., 200., 0.5))],
+                    inputs: vec![vec![1.], vec![1., 100., 3.]],
                     shift: 0,
                 }),
                 confirm2: Some(Indicator {
                     name: "ma2".to_string(),
                     indi_type: IndicatorType::ZeroLineCross,
-                    inputs: vec![Input::Double(3.), Input::IntRange((10, 200, 5))],
-                    shift: 1
+                    inputs: vec![vec![1.], vec![10., 200., 5.]],
+                    shift: 1,
                 }),
                 confirm3: None,
                 exit: Some(Indicator {
                     name: "exitor".to_string(),
                     indi_type: IndicatorType::TwoLineCross,
-                    inputs: vec![Input::Int(8), Input::IntRange((1, 20, 2))],
-                    shift: 2
+                    inputs: vec![vec![14., 100., 3.], vec![1., 30., 2.]],
+                    shift: 2,
                 }),
                 cont: None,
                 baseline: Some(Indicator {
                     name: "Ichy".to_string(),
                     indi_type: IndicatorType::OnChart,
-                    inputs: vec![Input::Int(8), Input::IntRange((1, 20, 2))],
-                    shift: 0
+                    inputs: vec![vec![41.], vec![10.]],
+                    shift: 0,
                 }),
                 volume: Some(Indicator {
                     name: "WAE".to_string(),
                     indi_type: IndicatorType::ZeroLineCross,
-                    inputs: vec![Input::Double(8.8), Input::IntRange((4, 11, 1))],
-                    shift: 0
+                    inputs: vec![vec![7.], vec![222.]],
+                    shift: 0,
                 }),
             },
             date: ("2017.08.01".to_string(), "2019.08.20".to_string()),
@@ -751,6 +593,20 @@ Report=C:/workdir/reports/test/USDCHF.xml"
             visual: false,
             symbols: vec!["EURUSD".to_string(), "AUDCAD".into()],
         };
-        println!("{}", serde_json::to_string_pretty(&run).unwrap());
+
+        let run_string = r#"{"name":"bt_run_name",
+            "indi_set":{"confirm":{"name":"ma","indi_type":0,"inputs":[[1.0],[1.0,100.0,3.0]],"shift":0},
+            "confirm2":{"name":"ma2","indi_type":0,"inputs":[[1.0],[10.0,200.0,5.0]],"shift":1},
+            "confirm3":null,
+            "exit":{"name":"exitor","indi_type":1,"inputs":[[14.0,100.0,3.0],[1.0,30.0,2.0]],"shift":2},
+            "cont":null,
+            "baseline":{"name":"Ichy","indi_type":2,"inputs":[[41.0],[10.0]],"shift":0},
+            "volume":{"name":"WAE","indi_type":0,"inputs":[[7.0],[222.0]],"shift":0}},
+            "date":["2017.08.01","2019.08.20"],
+            "backtest_model":0, "optimize":1,"optimize_crit":6,"visual":false,
+            "symbols":["EURUSD","AUDCAD"]}"#;
+
+        assert_eq!(run, serde_json::from_str(run_string).unwrap());
+        // println!("{}", serde_json::to_string(&run).unwrap());
     }
 }

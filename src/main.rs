@@ -16,6 +16,7 @@ mod params;
 mod xml_reader;
 
 use backtest_runner::*;
+use params::*;
 
 use std::future::Future;
 use std::process::Command;
@@ -24,6 +25,9 @@ use tokio::io::AsyncWriteExt;
 
 #[tokio::main]
 async fn main() {
+    let common = CommonParams::from_file("common.json").unwrap();
+    let run = RunParams::from_file("run.json").unwrap();
+    let runner = BacktestRunner::new(run.clone(), common.clone());
 
     // backtest_runner::run().await;
     /*     println!("Hello, world!");

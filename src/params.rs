@@ -3,6 +3,7 @@
 
 use std::ffi::{OsStr, OsString};
 use std::io;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -18,7 +19,7 @@ const FOREX_PAIRS: &'static [&'static str] = &[
     "CADJPY",
 ];
 
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Indicator {
     name: String,
     indi_type: IndicatorType,
@@ -52,7 +53,7 @@ impl Indicator {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize_repr, Deserialize_repr)]
+#[derive(Debug, PartialEq, Serialize_repr, Deserialize_repr, Clone)]
 #[repr(u8)]
 pub enum IndicatorType {
     ZeroLineCross = 0,
@@ -77,7 +78,7 @@ fn input_param_str(input: &Vec<f32>) -> Result<String> {
     }
 }
 
-#[derive(Default, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct IndicatorSet {
     confirm: Option<Indicator>,
     confirm2: Option<Indicator>,
@@ -125,7 +126,7 @@ impl IndicatorSet {
 }
 
 // input from the API
-#[derive(Default, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct RunParams {
     pub name: String,
     pub indi_set: IndicatorSet,
@@ -176,6 +177,11 @@ OptimizationCriterion={opti_crit}",
         }
     }
 
+    pub fn from_file(file: &str) -> Result<Self> {
+        let json_file = File::open(Path::new(file))?;
+        Ok(serde_json::from_reader(json_file)?)
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &String> {
         self.symbols.iter()
     }
@@ -191,7 +197,7 @@ OptimizationCriterion={opti_crit}",
  * } */
 
 // terminal execution specific configuration
-#[derive(Default, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct CommonParams {
     pub params_file: String,
     pub terminal_exe: PathBuf,
@@ -232,6 +238,12 @@ impl CommonParams {
             execution_mode: 0,
             // run_params : run,
         }
+    }
+
+
+    pub fn from_file(file: &str) -> Result<Self> {
+        let json_file = File::open(Path::new(file))?;
+        Ok(serde_json::from_reader(json_file)?)
     }
 
     pub fn reports_dir(mut self, reports_dir: &str) -> Self {

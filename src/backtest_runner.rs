@@ -5,7 +5,7 @@ use super::params::*;
 use super::xml_reader;
 use super::xml_reader::*;
 
-use std::fs::File;
+use std::fs::{self, File};
 use std::future::Future;
 use std::io;
 use std::io::prelude::*;
@@ -45,42 +45,66 @@ impl BacktestRunner {
         Ok(())
     }
 
-    fn write_terminal_config(&self, symbol: &String) -> Result<(), io::Error> {
+    fn write_terminal_config(&self, symbol: &String) -> Result<()> {
         // TODO mkdir
         let mut file = File::create(self.common.workdir.join("terminal.ini").as_path())?;
-        file.write_all(to_terminal_config(&self.common, &self.run, symbol).as_bytes())?;
+        file.write_all(to_terminal_config(&self.common, &self.run, symbol)?.as_bytes())?;
         Ok(())
     }
 
     fn run_terminal(&self) -> Result<ExitStatus> {
-        Command::new(
-            self.common.terminal_exe.to_str().context("conversion error for terminal.exe")?)
-        .status().context("Terminal Command execution failed")
+        let mut cmd = Command::new(
+            self.common
+                .terminal_exe
+                .as_os_str()
+                .to_str()
+                .context("conversion error for terminal.exe path")?,
+        );
+        cmd.arg(format!(
+            "/config:{}",
+            self.common
+                .workdir
+                .join("terminal.ini")
+                .as_os_str()
+                .to_str()
+                .context("conversion error in terminal.ini path")?
+        ));
+        debug!("running terminal: {:?}", cmd);
+
+        let output = cmd.output().context("Terminal Command execution failed")?;
+        debug!(
+            "Terminal out: {}{}",
+            String::from_utf8_lossy(&output.stdout).trim(),
+            String::from_utf8_lossy(&output.stdout).trim()
+        );
+        Ok(output.status)
     }
 
-    pub async fn run_backtest(&self) -> Result<bool> {
+    pub fn run_backtest(&self) -> Result<bool> {
+        self.write_indi_params()?;
+        fs::create_dir_all(get_reports_dir(&self.common, &self.run)?)?;
         for symbol in self.run.symbols.iter() {
             self.write_terminal_config(&symbol)?;
             self.run_terminal()?;
-            let results = self.collect_results(&symbol)?;
-            self.delete_results(&symbol)?;
+            let results = self.collect_report(&symbol)?;
+            self.delete_report(&symbol)?;
         }
         // self.push_results_to_database().context(DbError)?;
+        fs::remove_dir(get_reports_dir(&self.common, &self.run)?)?;
         Ok(true)
     }
 
-    fn delete_results(&self, symbol: &String) -> Result<(), io::Error> {
-        let report = get_reports_path(&self.common, &self.run, symbol);
-        println!("deleting report {}", report.to_string_lossy());
+    fn delete_report(&self, symbol: &String) -> Result<()> {
+        let report = get_reports_path(&self.common, &self.run, symbol)?;
+        debug!("deleting report {}", report.to_string_lossy());
+        fs::remove_file(report)?;
         Ok(())
     }
 
-    fn collect_results(&self, symbol: &String) -> Result<Vec<ResultRow>> {
-        Ok(read_results_xml(get_reports_path(
-            &self.common,
-            &self.run,
-            symbol,
-        ))?)
+    fn collect_report(&self, symbol: &String) -> Result<Vec<ResultRow>> {
+        let results = read_results_xml(get_reports_path(&self.common, &self.run, symbol)?)?;
+        trace!("{:?}", results);
+        Ok(results)
     }
 
     /* fn push_results_to_database(&self) -> Result<(), Error> {

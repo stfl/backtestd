@@ -2,11 +2,11 @@
 #![allow(unused_variables)]
 
 use std::ffi::{OsStr, OsString};
-use std::io;
 use std::fs::File;
+use std::io;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{ensure, Context, Result};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{self, json};
@@ -21,10 +21,10 @@ const FOREX_PAIRS: &'static [&'static str] = &[
 
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Indicator {
-    name: String,
-    indi_type: IndicatorType,
-    inputs: Vec<Vec<f32>>,
-    shift: u8,
+    pub name: String,
+    pub indi_type: IndicatorType,
+    pub inputs: Vec<Vec<f32>>,
+    pub shift: u8,
 }
 
 impl Indicator {
@@ -38,7 +38,7 @@ impl Indicator {
         for (i, inp) in self.inputs.iter().enumerate() {
             string.push_str(&format!(
                 // TODO remove _Double
-                "{use_case}_Double{idx}=\
+                "{use_case}_double{idx}=\
                  {input_value}\n",
                 use_case = use_case,
                 input_value = input_param_str(inp)?,
@@ -57,7 +57,7 @@ impl Indicator {
 #[repr(u8)]
 pub enum IndicatorType {
     ZeroLineCross = 0,
-    TwoLineCross = 1,
+    TwoLinesCross = 1,
     OnChart = 2,
 }
 
@@ -72,7 +72,7 @@ fn input_param_str(input: &Vec<f32>) -> Result<String> {
         1 => Ok(format!("{:.2}||0||0||0||N", input[0] as f32)),
         3 => Ok(format!(
             "0||{:.2}||{:.2}||{:.2}||Y",
-            input[0] as f32, input[1] as f32, input[2] as f32
+            input[0] as f32, input[2] as f32, input[1] as f32
         )),
         e => Err(anyhow!("wrong length of input: {}", e)),
     }
@@ -80,13 +80,13 @@ fn input_param_str(input: &Vec<f32>) -> Result<String> {
 
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct IndicatorSet {
-    confirm: Option<Indicator>,
-    confirm2: Option<Indicator>,
-    confirm3: Option<Indicator>,
-    exit: Option<Indicator>,
-    cont: Option<Indicator>,
-    baseline: Option<Indicator>,
-    volume: Option<Indicator>,
+    pub confirm: Option<Indicator>,
+    pub confirm2: Option<Indicator>,
+    pub confirm3: Option<Indicator>,
+    pub exit: Option<Indicator>,
+    pub cont: Option<Indicator>,
+    pub baseline: Option<Indicator>,
+    pub volume: Option<Indicator>,
 }
 
 impl IndicatorSet {
@@ -132,9 +132,9 @@ pub struct RunParams {
     pub indi_set: IndicatorSet,
     pub date: (String, String),
     pub backtest_model: BacktestModel,
-    optimize: OptimizeMode,
-    optimize_crit: OptimizeCrit,
-    visual: bool,
+    pub optimize: OptimizeMode,
+    pub optimize_crit: OptimizeCrit,
+    pub visual: bool,
     // symbols : &[],
     pub symbols: Vec<String>,
 }
@@ -221,11 +221,11 @@ impl CommonParams {
     pub fn new(workdir: &Path) -> Self {
         CommonParams {
             params_file: "expert_params.set".to_string(),
-            terminal_exe: PathBuf::from(r"C:/Program Files/MetaTrader 5/terminal64.exe"),
+            terminal_exe: PathBuf::from(r"C:\Program Files\MetaTrader 5\terminal64.exe"),
             workdir: workdir.to_path_buf(),
-            reports: workdir.join("reports"),
+            reports: PathBuf::from("reports"),
             // expert : "nnfx-ea/nnfx-ea.ex5".to_string(),
-            expert: "expert/expert.ex5".to_string(),
+            expert: r"expert\expert.ex5".to_string(),
             period: "D1".to_string(),
             login: "".to_string(),
             use_remote: true,
@@ -239,7 +239,6 @@ impl CommonParams {
             // run_params : run,
         }
     }
-
 
     pub fn from_file(file: &str) -> Result<Self> {
         let json_file = File::open(Path::new(file))?;
@@ -289,11 +288,15 @@ ExecutionMode={exec_mode}",
     }
 }
 
-pub fn to_terminal_config(common: &CommonParams, run: &RunParams, symbol: &String) -> String {
-    let mut reports_path = get_reports_dir(common, run).join(symbol);
-    reports_path.set_extension("xml");
-    let reports_path = reports_path.as_os_str();
-    format!(
+pub fn to_terminal_config(
+    common: &CommonParams,
+    run: &RunParams,
+    symbol: &String,
+) -> Result<String> {
+    let mut reports_path_relative = common.reports.join(&run.name).join(symbol);
+    reports_path_relative.set_extension("xml");
+    let reports_path_relative = reports_path_relative.as_os_str();
+    Ok(format!(
         "[Tester]
 {common}
 {run}
@@ -302,18 +305,26 @@ Report={report}",
         common = common.to_config(),
         run = run.to_config(),
         symb = symbol,
-        report = reports_path.to_string_lossy()
-    )
+        report = reports_path_relative.to_string_lossy()
+    ))
 }
 
-fn get_reports_dir(common: &CommonParams, run: &RunParams) -> PathBuf {
-    common.reports.join(&run.name)
+pub fn get_reports_dir(common: &CommonParams, run: &RunParams) -> Result<PathBuf> {
+    ensure!(
+        common.reports.is_relative(),
+        "Reports path needs to be relative"
+    );
+    Ok(common.workdir.join(common.reports.join(&run.name)))
 }
 
-pub fn get_reports_path(common: &CommonParams, run: &RunParams, symbol: &String) -> PathBuf {
-    let mut reports_path = get_reports_dir(&common, &run).join(symbol);
+pub fn get_reports_path(
+    common: &CommonParams,
+    run: &RunParams,
+    symbol: &String,
+) -> Result<PathBuf> {
+    let mut reports_path = get_reports_dir(&common, &run)?.join(symbol);
     reports_path.set_extension("xml");
-    reports_path
+    Ok(reports_path)
 }
 
 #[derive(Debug, PartialEq, Copy, Clone, Serialize_repr, Deserialize_repr)]
@@ -397,7 +408,7 @@ Confirm_Shift=7
         assert_eq!(
             indi.to_params_config("Confirm").unwrap(),
             "Confirm_Indicator=ama
-Confirm_Double0=3.00||0||0||0||N
+Confirm_double0=3.00||0||0||0||N
 Confirm_Shift=7
 "
         );
@@ -406,8 +417,8 @@ Confirm_Shift=7
         assert_eq!(
             indi.to_params_config("Confirm").unwrap(),
             "Confirm_Indicator=ama
-Confirm_Double0=3.00||0||0||0||N
-Confirm_Double1=4.00||0||0||0||N
+Confirm_double0=3.00||0||0||0||N
+Confirm_double1=4.00||0||0||0||N
 Confirm_Shift=7
 "
         );
@@ -416,9 +427,9 @@ Confirm_Shift=7
         assert_eq!(
             indi.to_params_config("Baseline").unwrap(),
             "Baseline_Indicator=ama
-Baseline_Double0=3.00||0||0||0||N
-Baseline_Double1=4.00||0||0||0||N
-Baseline_Double2=0||10.00||200.00||0.50||Y
+Baseline_double0=3.00||0||0||0||N
+Baseline_double1=4.00||0||0||0||N
+Baseline_double2=0||10.00||0.50||200.00||Y
 Baseline_Shift=7
 "
         );
@@ -436,15 +447,18 @@ Baseline_Shift=7
         };
         assert_eq!(
             term_params.params_path().as_path(),
-            Path::new("C:/workdir/MQL5/Profiles/Tester/test.set")
+            Path::new(r"C:/workdir/MQL5/Profiles/Tester/test.set")
         );
 
         let term_params = CommonParams::new(Path::new(
-            "C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075",
+            r"C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075",
         ));
-        assert_eq!(term_params.params_path().as_path(),
-                    Path::new("C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Profiles/Tester/expert_params.set")
-         );
+        assert_eq!(
+            term_params.params_path().as_path(),
+            Path::new(
+                r"C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Profiles/Tester/expert_params.set"
+            )
+        );
     }
 
     #[test]
@@ -453,22 +467,22 @@ Baseline_Shift=7
         let mut run = RunParams::new();
         run.name = "test".to_string();
         assert_eq!(
-            get_reports_dir(&common, &run).as_path(),
-            PathBuf::from("C:/workdir/reports/").join("test")
+            get_reports_dir(&common, &run).unwrap().as_path(),
+            PathBuf::from(r"C:/workdir/reports/").join("test")
         );
 
-        let mut reports_path = get_reports_dir(&common, &run).join("USDCHF");
+        let mut reports_path = get_reports_dir(&common, &run).unwrap().join("USDCHF");
         reports_path.set_extension("xml");
         let reports_path = reports_path.as_os_str();
 
         assert_eq!(
             reports_path.to_string_lossy(),
-            "C:/workdir/reports/test/USDCHF.xml"
+            r"C:/workdir/reports/test/USDCHF.xml"
         );
 
         assert_eq!(
-            (*get_reports_path(&common, &run, &"USDCHF".to_string())).to_str(),
-            Some("C:/workdir/reports/test/USDCHF.xml")
+            (*get_reports_path(&common, &run, &"USDCHF".to_string()).unwrap()).to_str(),
+            Some(r"C:/workdir/reports/test/USDCHF.xml")
         );
     }
 
@@ -486,7 +500,7 @@ Baseline_Shift=7
 
     #[test]
     fn to_terminal_config_test() {
-        let common = CommonParams::new(Path::new("C:/workdir"));
+        let common = CommonParams::new(Path::new(r"C:/workdir"));
         let mut run = RunParams::new();
         run.symbols = vec!["USDCHF", "USDJPY", "USDCAD"]
             .iter()
@@ -496,10 +510,10 @@ Baseline_Shift=7
         let mut sym_iter = run.iter();
 
         assert_eq!(
-            to_terminal_config(&common, &run, sym_iter.next().unwrap()),
-            "[Tester]
+            to_terminal_config(&common, &run, sym_iter.next().unwrap()).unwrap(),
+            r"[Tester]
 
-Expert=expert/expert.ex5
+Expert=expert\expert.ex5
 ExpertParameters=expert_params.set
 Period=D1
 Login=
@@ -519,19 +533,19 @@ Model=2
 Optimization=1
 OptimizationCriterion=6
 Symbol=USDCHF
-Report=C:/workdir/reports/test/USDCHF.xml"
+Report=reports/test/USDCHF.xml"
         );
     }
 
     #[test]
     fn json_test() {
-        let workdir = Path::new("C:/workdir");
+        let workdir = Path::new(r"C:\workdir");
         let term_params = CommonParams {
             params_file: "expert_params.set".to_string(),
-            terminal_exe: PathBuf::from(r"C:/terminal64.exe"),
+            terminal_exe: PathBuf::from(r"C:\terminal64.exe"),
             workdir: workdir.to_path_buf(),
-            reports: workdir.join("reports"),
-            expert: "expert/expert.ex5".to_string(),
+            reports: PathBuf::from("reports"),
+            expert: r"expert\expert.ex5".to_string(),
             period: "D1".to_string(),
             login: "".to_string(),
             use_remote: true,
@@ -545,10 +559,10 @@ Report=C:/workdir/reports/test/USDCHF.xml"
         };
 
         let j = r#"{"params_file":"expert_params.set",
-                       "terminal_exe":"C:/terminal64.exe",
-                       "workdir":"C:/workdir",
-                       "reports":"C:/workdir/reports",
-                       "expert":"expert/expert.ex5",
+                       "terminal_exe":"C:\\terminal64.exe",
+                       "workdir":"C:\\workdir",
+                       "reports":"reports",
+                       "expert":"expert\\expert.ex5",
                        "period":"D1",
                        "login":"",
                        "use_remote":true,
@@ -580,7 +594,7 @@ Report=C:/workdir/reports/test/USDCHF.xml"
                 confirm3: None,
                 exit: Some(Indicator {
                     name: "exitor".to_string(),
-                    indi_type: IndicatorType::TwoLineCross,
+                    indi_type: IndicatorType::TwoLinesCross,
                     inputs: vec![vec![14., 100., 3.], vec![1., 30., 2.]],
                     shift: 2,
                 }),
@@ -619,6 +633,5 @@ Report=C:/workdir/reports/test/USDCHF.xml"
             "symbols":["EURUSD","AUDCAD"]}"#;
 
         assert_eq!(run, serde_json::from_str(run_string).unwrap());
-        // println!("{}", serde_json::to_string(&run).unwrap());
     }
 }

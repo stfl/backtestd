@@ -73,8 +73,7 @@ impl ResultRow {
 }
 
 pub fn read_results_xml(results_file: PathBuf) -> Result<Vec<ResultRow>> {
-    let mut report_reader =
-        Reader::from_file(results_file.as_path())?;
+    let mut report_reader = Reader::from_file(results_file.as_path())?;
     report_reader.trim_text(true);
     let mut count = 0;
     let mut buf = Vec::new();
@@ -115,7 +114,15 @@ pub fn read_results_xml(results_file: PathBuf) -> Result<Vec<ResultRow>> {
         buf.clear();
     }
 
-    ensure!(count - 1 == rows.len(), "something went wrong with the row count");
+    ensure!(
+        count - 1 == rows.len(),
+        "something went wrong with the row count"
+    );
+    info!(
+        "read {} rows from {:?}",
+        count - 1,
+        results_file.file_name().unwrap()
+    );
     Ok(rows)
 }
 

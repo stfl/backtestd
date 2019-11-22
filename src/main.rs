@@ -53,7 +53,7 @@ fn main() {
         execution_mode: 0,
     };
     let run = RunParams {
-        name: "test1".to_string(),
+        name: "asctrend_wae".to_string(),
         indi_set: IndicatorSet {
             confirm: Some(Indicator {
                 name: "asctrend".to_string(),
@@ -66,22 +66,7 @@ fn main() {
             exit: None,
             cont: None,
             baseline: None,
-            volume: Some(Indicator {
-                name: "wae".to_string(),
-                indi_type: IndicatorType::TwoLinesCross,
-                inputs: vec![
-                    vec![20.],
-                    vec![40.],
-                    vec![20.],
-                    vec![2.],
-                    vec![150.],
-                    vec![400.],
-                    vec![15.],
-                    vec![150.],
-                    vec![2.],
-                ],
-                shift: 0,
-            }),
+            volume: Some(serde_any::from_file(common.workdir.join("wae.yaml").as_os_str().to_str().unwrap()).unwrap()),
         },
         date: ("2017.08.01".to_string(), "2019.08.20".to_string()),
         backtest_model: BacktestModel::OpenPrice,
@@ -90,6 +75,13 @@ fn main() {
         visual: false,
         symbols: vec!["EURUSD".to_string(), "AUDCAD".into()],
     };
+    println!("writing to {:?}", common.workdir.join("run.json").as_os_str().to_str().unwrap());
+    serde_any::to_file(common.workdir.join("common.yaml").as_os_str().to_str().unwrap(), &common).unwrap();
+    serde_any::to_file(common.workdir.join("run.yaml").as_os_str().to_str().unwrap(), &run).unwrap();
+    serde_any::to_file(common.workdir.join("wae.yaml").as_os_str().to_str().unwrap(), &run.indi_set.volume).unwrap();
+
+    /* common.to_file(common.workdir.join("common.json").as_os_str().to_str().unwrap()).expect("can't write file");
+     * run.to_file(common.workdir.join("run.json").as_os_str().to_str().unwrap()).expect("can't write file"); */
     let runner = BacktestRunner::new(run.clone(), common.clone());
     runner.run_backtest().unwrap();
 }

@@ -51,6 +51,16 @@ impl Indicator {
 
         Ok(string)
     }
+
+    pub fn from_file(file: &str) -> Result<Self> {
+        let json_file = File::open(Path::new(file))?;
+        Ok(serde_json::from_reader(json_file)?)
+    }
+
+    pub fn to_file(&self, file: &str) -> Result<()> {
+        let json_file = File::create(Path::new(file))?;
+        Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize_repr, Deserialize_repr, Clone)]
@@ -74,7 +84,7 @@ fn input_param_str(input: &Vec<f32>) -> Result<String> {
             "0||{:.2}||{:.2}||{:.2}||Y",
             input[0] as f32, input[2] as f32, input[1] as f32
         )),
-        e => Err(anyhow!("wrong length of input: {}", e)),
+        e => Err(anyhow!("wrong length of indicator params input: {}", e)),
     }
 }
 
@@ -182,6 +192,11 @@ OptimizationCriterion={opti_crit}",
         Ok(serde_json::from_reader(json_file)?)
     }
 
+    pub fn to_file(&self, file: &str) -> Result<()> {
+        let json_file = File::create(Path::new(file))?;
+        Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &String> {
         self.symbols.iter()
     }
@@ -243,6 +258,11 @@ impl CommonParams {
     pub fn from_file(file: &str) -> Result<Self> {
         let json_file = File::open(Path::new(file))?;
         Ok(serde_json::from_reader(json_file)?)
+    }
+
+    pub fn to_file(&self, file: &str) -> Result<()> {
+        let json_file = File::create(Path::new(file))?;
+        Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
     }
 
     pub fn reports_dir(mut self, reports_dir: &str) -> Self {
@@ -439,6 +459,7 @@ Baseline_Shift=7
     }
 
     #[test]
+    #[cfg(unix)]
     fn terminal_config_params_path_test() {
         let term_params = CommonParams {
             workdir: PathBuf::from(r"C:/workdir"),
@@ -462,6 +483,7 @@ Baseline_Shift=7
     }
 
     #[test]
+    #[cfg(unix)]
     fn reports_dir_test() {
         let common = CommonParams::new(Path::new("C:/workdir"));
         let mut run = RunParams::new();
@@ -499,6 +521,7 @@ Baseline_Shift=7
     }
 
     #[test]
+    #[cfg(unix)]
     fn to_terminal_config_test() {
         let common = CommonParams::new(Path::new(r"C:/workdir"));
         let mut run = RunParams::new();

@@ -16,6 +16,7 @@ log = "*"
 # tokio = "=0.2.0-alpha.6"
 
 quick-xml = "0.17.0"
+handlebars = "2"
 
 serde = "*"
 serde_json = "*"

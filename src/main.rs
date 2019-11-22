@@ -17,10 +17,12 @@ extern crate log;
 
 mod backtest_runner;
 mod params;
+mod signal_generator;
 mod xml_reader;
 
 use backtest_runner::*;
 use params::*;
+use signal_generator::*;
 
 // use std::future::Future;
 
@@ -57,7 +59,6 @@ fn main() {
         indi_set: IndicatorSet {
             confirm: Some(Indicator {
                 name: "asctrend".to_string(),
-                indi_type: IndicatorType::ZeroLineCross,
                 inputs: vec![vec![1., 20., 1.]],
                 shift: 0,
             }),
@@ -66,7 +67,17 @@ fn main() {
             exit: None,
             cont: None,
             baseline: None,
-            volume: Some(serde_any::from_file(common.workdir.join("wae.yaml").as_os_str().to_str().unwrap()).unwrap()),
+            volume: Some(
+                serde_any::from_file(
+                    common
+                        .workdir
+                        .join("wae.yaml")
+                        .as_os_str()
+                        .to_str()
+                        .unwrap(),
+                )
+                .unwrap(),
+            ),
         },
         date: ("2017.08.01".to_string(), "2019.08.20".to_string()),
         backtest_model: BacktestModel::OpenPrice,
@@ -75,10 +86,45 @@ fn main() {
         visual: false,
         symbols: vec!["EURUSD".to_string(), "AUDCAD".into()],
     };
-    println!("writing to {:?}", common.workdir.join("run.json").as_os_str().to_str().unwrap());
-    serde_any::to_file(common.workdir.join("common.yaml").as_os_str().to_str().unwrap(), &common).unwrap();
-    serde_any::to_file(common.workdir.join("run.yaml").as_os_str().to_str().unwrap(), &run).unwrap();
-    serde_any::to_file(common.workdir.join("wae.yaml").as_os_str().to_str().unwrap(), &run.indi_set.volume).unwrap();
+    println!(
+        "writing to {:?}",
+        common
+            .workdir
+            .join("run.json")
+            .as_os_str()
+            .to_str()
+            .unwrap()
+    );
+    serde_any::to_file(
+        common
+            .workdir
+            .join("common.yaml")
+            .as_os_str()
+            .to_str()
+            .unwrap(),
+        &common,
+    )
+    .unwrap();
+    serde_any::to_file(
+        common
+            .workdir
+            .join("run.yaml")
+            .as_os_str()
+            .to_str()
+            .unwrap(),
+        &run,
+    )
+    .unwrap();
+    serde_any::to_file(
+        common
+            .workdir
+            .join("wae.yaml")
+            .as_os_str()
+            .to_str()
+            .unwrap(),
+        &run.indi_set.volume,
+    )
+    .unwrap();
 
     /* common.to_file(common.workdir.join("common.json").as_os_str().to_str().unwrap()).expect("can't write file");
      * run.to_file(common.workdir.join("run.json").as_os_str().to_str().unwrap()).expect("can't write file"); */

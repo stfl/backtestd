@@ -22,7 +22,6 @@ const FOREX_PAIRS: &'static [&'static str] = &[
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Indicator {
     pub name: String,
-    pub indi_type: IndicatorType,
     pub inputs: Vec<Vec<f32>>,
     pub shift: u8,
 }
@@ -60,20 +59,6 @@ impl Indicator {
     pub fn to_file(&self, file: &str) -> Result<()> {
         let json_file = File::create(Path::new(file))?;
         Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize_repr, Deserialize_repr, Clone)]
-#[repr(u8)]
-pub enum IndicatorType {
-    ZeroLineCross = 0,
-    TwoLinesCross = 1,
-    OnChart = 2,
-}
-
-impl Default for IndicatorType {
-    fn default() -> Self {
-        IndicatorType::ZeroLineCross
     }
 }
 
@@ -407,7 +392,6 @@ mod test {
     fn indicator_config_test() {
         let mut indi = Indicator {
             name: "ama".to_string(),
-            indi_type: IndicatorType::OnChart,
             shift: 0,
             inputs: Vec::new(),
         };
@@ -604,33 +588,28 @@ Report=reports/test/USDCHF.xml"
             indi_set: IndicatorSet {
                 confirm: Some(Indicator {
                     name: "ma".to_string(),
-                    indi_type: IndicatorType::ZeroLineCross,
                     inputs: vec![vec![1.], vec![1., 100., 3.]],
                     shift: 0,
                 }),
                 confirm2: Some(Indicator {
                     name: "ma2".to_string(),
-                    indi_type: IndicatorType::ZeroLineCross,
                     inputs: vec![vec![1.], vec![10., 200., 5.]],
                     shift: 1,
                 }),
                 confirm3: None,
                 exit: Some(Indicator {
                     name: "exitor".to_string(),
-                    indi_type: IndicatorType::TwoLinesCross,
                     inputs: vec![vec![14., 100., 3.], vec![1., 30., 2.]],
                     shift: 2,
                 }),
                 cont: None,
                 baseline: Some(Indicator {
                     name: "Ichy".to_string(),
-                    indi_type: IndicatorType::OnChart,
                     inputs: vec![vec![41.], vec![10.]],
                     shift: 0,
                 }),
                 volume: Some(Indicator {
                     name: "WAE".to_string(),
-                    indi_type: IndicatorType::ZeroLineCross,
                     inputs: vec![vec![7.], vec![222.]],
                     shift: 0,
                 }),
@@ -644,13 +623,13 @@ Report=reports/test/USDCHF.xml"
         };
 
         let run_string = r#"{"name":"bt_run_name",
-            "indi_set":{"confirm":{"name":"ma","indi_type":0,"inputs":[[1.0],[1.0,100.0,3.0]],"shift":0},
-            "confirm2":{"name":"ma2","indi_type":0,"inputs":[[1.0],[10.0,200.0,5.0]],"shift":1},
+            "indi_set":{"confirm":{"name":"ma","inputs":[[1.0],[1.0,100.0,3.0]],"shift":0},
+            "confirm2":{"name":"ma2","inputs":[[1.0],[10.0,200.0,5.0]],"shift":1},
             "confirm3":null,
-            "exit":{"name":"exitor","indi_type":1,"inputs":[[14.0,100.0,3.0],[1.0,30.0,2.0]],"shift":2},
+            "exit":{"name":"exitor","inputs":[[14.0,100.0,3.0],[1.0,30.0,2.0]],"shift":2},
             "cont":null,
-            "baseline":{"name":"Ichy","indi_type":2,"inputs":[[41.0],[10.0]],"shift":0},
-            "volume":{"name":"WAE","indi_type":0,"inputs":[[7.0],[222.0]],"shift":0}},
+            "baseline":{"name":"Ichy","inputs":[[41.0],[10.0]],"shift":0},
+            "volume":{"name":"WAE","inputs":[[7.0],[222.0]],"shift":0}},
             "date":["2017.08.01","2019.08.20"],
             "backtest_model":0, "optimize":1,"optimize_crit":6,"visual":false,
             "symbols":["EURUSD","AUDCAD"]}"#;

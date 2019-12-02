@@ -187,14 +187,66 @@ OptimizationCriterion={opti_crit}",
     }
 }
 
-/* impl Iterator for RunParams {
- *     type Item = String;
- *
- *     fn next(&mut self) -> Option<String> {
- *         let symbols_iter = self.symbols.iter();
- *         symbols_iter.next()
- *     }
- * } */
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct RunParamsFile {
+    pub name: String,
+    pub indi_set: IndicatorSetFile,
+    pub date: (String, String),
+    pub backtest_model: BacktestModel,
+    pub optimize: OptimizeMode,
+    pub optimize_crit: OptimizeCrit,
+    pub visual: bool,
+    pub symbols: Vec<String>,
+}
+
+impl From<RunParamsFile> for RunParams {
+    fn from(s: RunParamsFile) -> Self {
+        RunParams {
+            name: s.name,
+            indi_set: s.indi_set.into(),
+            date: s.date,
+            backtest_model: s.backtest_model,
+            optimize: s.optimize,
+            optimize_crit: s.optimize_crit,
+            visual: s.visual,
+            symbols: s.symbols,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct IndicatorSetFile {
+    pub confirm: Option<PathBuf>,
+    pub confirm2: Option<PathBuf>,
+    pub confirm3: Option<PathBuf>,
+    pub exit: Option<PathBuf>,
+    pub cont: Option<PathBuf>,
+    pub baseline: Option<PathBuf>,
+    pub volume: Option<PathBuf>,
+}
+
+impl From<IndicatorSetFile> for IndicatorSet {
+    fn from(s: IndicatorSetFile) -> Self {
+        IndicatorSet {
+            confirm: s.confirm.map(|f| serde_any::from_file(f).unwrap()).into(),
+            confirm2: s.confirm2.map(|f| serde_any::from_file(f).unwrap()).into(),
+            confirm3: s
+                .confirm3
+                .map({ |f| serde_any::from_file(f).unwrap() })
+                .into(),
+            exit: s.exit.map({ |f| serde_any::from_file(f).unwrap() }).into(),
+            cont: s.cont.map({ |f| serde_any::from_file(f).unwrap() }).into(),
+            baseline: s
+                .baseline
+                .map({ |f| serde_any::from_file(f).unwrap() })
+                .into(),
+            volume: s
+                .volume
+                .map({ |f| serde_any::from_file(f).unwrap() })
+                .into(),
+        }
+    }
+}
 
 // terminal execution specific configuration
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -635,5 +687,41 @@ Report=reports/test/USDCHF.xml"
             "symbols":["EURUSD","AUDCAD"]}"#;
 
         assert_eq!(run, serde_json::from_str(run_string).unwrap());
+
+        let _ = serde_any::to_file("/tmp/confirm.yaml", &run.indi_set.confirm);
+        let _ = serde_any::to_file("/tmp/confirm2.yaml", &run.indi_set.confirm2);
+        let _ = serde_any::to_file("/tmp/baseline.yaml", &run.indi_set.baseline);
+        let _ = serde_any::to_file("/tmp/exit.yaml", &run.indi_set.exit);
+        let _ = serde_any::to_file("/tmp/volume.yaml", &run.indi_set.volume);
+
+        assert_eq!(
+            Some(serde_any::from_file::<Indicator, _>("/tmp/confirm.yaml").unwrap()),
+            run.indi_set.confirm
+        );
+
+        let indi_set = IndicatorSetFile {
+            confirm: Some("/tmp/confirm.yaml".into()),
+            confirm2: Some("/tmp/confirm2.yaml".into()),
+            confirm3: None,
+            exit: Some("/tmp/exit.yaml".into()),
+            cont: None,
+            baseline: Some("/tmp/baseline.yaml".into()),
+            volume: Some("/tmp/volume.yaml".into()),
+        };
+        assert_eq!(IndicatorSet::from(indi_set.clone()), run.indi_set);
+
+        let run_cl = run.clone();
+        let rpf: RunParams = RunParamsFile {
+            name: run_cl.name,
+            indi_set: indi_set.into(),
+            date: run_cl.date,
+            backtest_model: run_cl.backtest_model,
+            optimize: run_cl.optimize,
+            optimize_crit: run_cl.optimize_crit,
+            visual: run_cl.visual,
+            symbols: run_cl.symbols,
+        }
+        .into();
+        assert_eq!(rpf, run);
     }
 }

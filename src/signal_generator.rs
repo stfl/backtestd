@@ -2,9 +2,10 @@
 #![allow(unused_variables)]
 
 use super::params::*;
+use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::ffi::{OsStr,OsString};
 
 use serde_json::value::{self, Map, Value as Json};
 
@@ -21,8 +22,27 @@ pub struct SignalParams {
     pub name: String,
     pub name_indi: String,
     pub indi_type: IndicatorType,
-    pub inputs: Vec<InputType>,
+    pub inputs: Vec<(InputType, Vec<f32>)>,
     pub buffers: Vec<u8>,
+    pub shift: u8,
+}
+
+impl From<&SignalParams> for Indicator {
+    fn from(sig: &SignalParams) -> Self {
+        Indicator {
+            name: sig.name.clone(),
+            inputs: sig
+                .inputs
+                .iter()
+                .map(|i| match i.1.len() {
+                    1 => i.1.clone(),      // only default value is given -> take it
+                    4 => i.1[1..4].into(), // if range is given as well. take the range
+                    _ => panic!("input length is invalid"),
+                })
+                .collect(),
+            shift: sig.shift,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -48,7 +68,8 @@ pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Resul
     let mut handlebars = Handlebars::new();
 
     let mut output_file =
-        File::create(output_dir.join(format!("Signal{}.mqh", signal_params.name)))?;
+        File::create(output_dir.join(format!("Signal{}.mqh", signal_params.name)))
+            .context("creating Signals header")?;
 
     let mut data = Map::new();
     data.insert("year".to_string(), to_json("2019"));
@@ -61,7 +82,7 @@ pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Resul
             signal_params
                 .inputs
                 .iter()
-                .map(|i| match i {
+                .map(|i| match i.0 {
                     InputType::Int => vec!["integer".to_string(), "INT".to_string()],
                     InputType::Double => vec!["double".to_string(), "DOUBLE".to_string()],
                     InputType::String => vec!["string".to_string(), "STRING".to_string()],
@@ -74,8 +95,7 @@ pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Resul
     handlebars.register_helper("inc", Box::new(inc_helper));
     handlebars.register_helper("length", Box::new(length_helper));
 
-    let tmpl_str = r#"
-//+------------------------------------------------------------------+
+    let tmpl_str = r#"//+------------------------------------------------------------------+
 //|                                 Copyright {{year}}, Stefan Lendl |
 //+------------------------------------------------------------------+
 #include <..\Experts\BacktestExpert\Signal\\{{indi_type}}Signal.mqh>
@@ -84,7 +104,7 @@ pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Resul
 class CSignal{{name}} : public C{{indi_type}}Signal {
 public:
   CSignal{{name}}(void);
-  virtual void      CSignal{{name}}::ParamsFromInput(double &input[]);
+  virtual void      CSignal{{name}}::ParamsFromInput(double &Input[]);
 };
 
 CSignal{{name}}::CSignal{{name}}(void) {
@@ -95,19 +115,21 @@ CSignal{{name}}::CSignal{{name}}(void) {
   {{/if ~}}
 }
 
-void CSignal{{name}}::ParamsFromInput(double &input[]) {
+void CSignal{{name}}::ParamsFromInput(double &Input[]) {
   m_params_size = {{length inputs}};
   ArrayResize(m_params, m_params_size);
   m_params[0].type=TYPE_STRING;
-  m_params[0].string_value="{{name_indi}}.ex5";
+  m_params[0].string_value="Indi\\{{name_indi}}.ex5";
   {{#each inputs as |i| ~}}
   m_params[{{inc @index}}].type=TYPE_{{i.1}};
-  m_params[{{inc @index}}].{{i.0}}_value=input[{{@index}}];
+  m_params[{{inc @index}}].{{i.0}}_value=Input[{{@index}}];
   {{/each ~}}
 }
 "#;
 
-    handlebars.render_template_to_write(tmpl_str, &data, &mut output_file)?;
+    handlebars
+        .render_template_to_write(tmpl_str, &data, &mut output_file)
+        .context("writing template")?;
     Ok(())
 }
 
@@ -148,26 +170,28 @@ fn length_helper(
 }
 
 pub fn generate_signal_includes(path: &PathBuf) -> Result<()> {
-    // TODO this only checks for tailing /
+    // TODO this only checks for trailing /
     // ensure!(path.is_dir(), format!("{:?} is not a directory", path));
 
-    // TODO fs::remove_file(path.join("SignalTest.mqh"))?;
-    let headers : Vec<OsString> = fs::read_dir(path)?
+    fs::remove_file(path.join("AllSignals.mqh")).context("removing AllSignals.mqh")?;
+    let headers: Vec<OsString> = fs::read_dir(path)
+        .context("reading signals header dir")?
         .filter_map(|entry| {
             entry.ok().and_then(|e| {
-                e.path()
-                    .file_name()
-                    .map(|n| n.to_owned()) // map(|s| String::from(s)))
+                e.path().file_name().map(|n| n.to_owned()) // map(|s| String::from(s)))
             })
         })
         .collect();
     info!("generating AllSingnals.mqh for {:#?}", headers);
-    let out = generate_includes(headers)?;
-    // TODO write out to AllSignals.mqh
+    let out = generate_includes(headers);
+    // TSignalTestODO write out to AllSignals.mqh
+    //
+    let mut file = File::create(path.join("AllSignals.mqh")).context("create AllSignals.mqh")?;
+    file.write_all(out.as_bytes()).context("writing AllSignals.mqh")?;
     Ok(())
 }
 
-fn generate_includes(headers: Vec<OsString>) -> Result<String> {
+fn generate_includes(headers: Vec<OsString>) -> String {
     let output: String = format!(
         "{includes}
 #define PRODUCE_SIGNALS() \\
@@ -189,8 +213,7 @@ fn generate_includes(headers: Vec<OsString>) -> Result<String> {
             })
             .collect::<String>()
     );
-
-    Ok(output)
+    output
 }
 
 #[cfg(test)]
@@ -206,24 +229,25 @@ mod tests {
             name_indi: "test".to_string(),
             indi_type: IndicatorType::TwoLinesCross,
             inputs: vec![
-                InputType::Int,
-                InputType::Int,
-                InputType::Double,
-                InputType::Int,
+                (InputType::Int, vec![0f32]),
+                (InputType::Int, vec![0f32]),
+                (InputType::Double, vec![0f32]),
+                (InputType::Int, vec![0f32]),
             ],
             buffers: vec![0u8],
+            shift: 0,
         };
-        assert!(generate_signal(&sig_params, Path::new(".")).is_err());
+        assert!(generate_signal(&sig_params, Path::new("/tmp")).is_err());
         sig_params.buffers = vec![0u8, 0u8];
-        assert!(generate_signal(&sig_params, Path::new(".")).is_err());
+        assert!(generate_signal(&sig_params, Path::new("/tmp")).is_err());
         sig_params.buffers[1] = 1u8;
-        generate_signal(&sig_params, Path::new(".")).unwrap();
-        fs::remove_file("SignalTest.mqh").unwrap();
+        generate_signal(&sig_params, Path::new("/tmp")).unwrap();
+        fs::remove_file("/tmp/SignalTest.mqh").unwrap();
     }
 
     #[test]
     fn generate_signal_include_test() {
-        let headers : Vec<OsString> = vec![
+        let headers: Vec<OsString> = vec![
             "asctrendsignal.mqh".into(),
             "pricechannel_stopsignal.mqh".into(),
             "SignalKijunSen.mqh".into(),
@@ -231,7 +255,7 @@ mod tests {
             "supertrendsignal.mqh".into(),
         ];
         assert_eq!(
-            generate_includes(headers).unwrap(),
+            generate_includes(headers),
             r#"#include "asctrendsignal.mqh"
 #include "pricechannel_stopsignal.mqh"
 #include "SignalKijunSen.mqh"
@@ -252,4 +276,41 @@ PRODUCE_supertrendsignal \
      * fn p_test() {
      *     generate_signal_includes(&PathBuf::from("/run/user/2000/gvfs/smb-share:server=192.168.122.22,share=metaquotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/MyIndicators/Signals/")).unwrap();
      * } */
+
+    #[test]
+    fn from_signal_params_for_indicator_test() {
+        let mut sig_params = SignalParams {
+            name: "Test".to_string(),
+            name_indi: "test".to_string(),
+            indi_type: IndicatorType::TwoLinesCross,
+            inputs: vec![
+                (InputType::Int, vec![1f32]),
+                (InputType::Int, vec![10f32, 5f32, 20f32, 2f32]),
+                (InputType::Double, vec![6.2]),
+                (InputType::Double, vec![10f32, 6.1, 20f32, 0.5]),
+            ],
+            buffers: vec![0u8],
+            shift: 0,
+        };
+        let indi = Indicator::from(&sig_params);
+        assert_eq!(
+            indi,
+            Indicator {
+                name: "Test".to_string(),
+                inputs: vec![
+                    vec![1f32],
+                    vec![5f32, 20f32, 2f32],
+                    vec![6.2],
+                    vec![6.1, 20f32, 0.5],
+                ],
+                shift: 0,
+            }
+        );
+
+        use serde_any;
+
+        sig_params.inputs[1].1 = vec![10f32, 5f32, 20f32, 2f32, 3f32];
+        let result = std::panic::catch_unwind(|| Indicator::from(&sig_params));
+        assert!(result.is_err());
+    }
 }

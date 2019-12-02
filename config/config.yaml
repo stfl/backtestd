@@ -1,0 +1,16 @@
+---
+params_file: expert_params.set
+terminal_exe: "C:\\Program Files\\MetaTrader 5\\terminal64.exe"
+workdir: "C:\\Users\\stele\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075"
+reports: reports
+expert: "BacktestExpert\\nnfx-ea\\nnfx-ea.ex5"
+period: D1
+login: "5152"
+use_remote: true
+use_local: true
+replace_report: true
+shutdown_terminal: true
+deposit: 10000
+currency: USD
+leverage: 100
+execution_mode: 0

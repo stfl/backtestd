@@ -1,0 +1,12 @@
+---
+name: kijunsen
+inputs:
+   # Tenken-Sen
+  - - 9.0
+   # Kijun-Sen 26
+  - - 15.0
+    - 40.0
+    - 1.0
+   # Span
+  - - 52.0
+shift: 0

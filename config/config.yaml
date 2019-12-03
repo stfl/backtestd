@@ -5,7 +5,7 @@ workdir: "C:\\Users\\stele\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8
 reports: reports
 expert: "BacktestExpert\\nnfx-ea\\nnfx-ea.ex5"
 period: D1
-login: "5152"
+login: "7090"
 use_remote: true
 use_local: true
 replace_report: true

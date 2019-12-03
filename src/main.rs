@@ -143,6 +143,7 @@ fn main() {
         let run: RunParams = serde_any::from_file::<RunParamsFile, _>(input_file)
             .expect("reading RunParamsFile failed")
             .into();
+        debug!("run: {:#?}", run);
         let runner = BacktestRunner::new(run, config.clone());
         let _ = runner.run_backtest().expect("running backtest failed");
     }

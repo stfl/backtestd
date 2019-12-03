@@ -1,0 +1,12 @@
+---
+name: pricechannel_stop
+inputs:
+  # Channel Period 5
+  - - 3.0
+    - 10.0
+    - 1.0
+  # RISK 4
+  - - 0.02
+    - 0.20
+    - 0.2
+shift: 0

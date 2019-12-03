@@ -1,0 +1,51 @@
+---
+name: bt_run
+indi_set:
+  confirm: config/indicator/confirm/Ash.yaml
+  confirm2: ~
+  confirm3: ~
+  exit: ~
+  cont: ~
+  baseline: ~
+  volume: ~
+date:
+  - 2017.08.01
+  - 2019.08.20
+backtest_model: 2
+    # EveryTick = 0,     // "Every tick"
+    # OneMinuteOHLC = 1, // "1 minute OHLC"
+    # OpenPrice = 2,     // "Open price only"
+    # MathCalc = 3,      // "Math calculations"
+    # EveryTickReal = 4, // "Every tick based on real ticks"
+optimize: 1
+optimize_crit: 6
+visual: false
+symbols:
+  - EURUSD
+  - AUDCAD
+  - GBPUSD
+  - USDCHF
+  - USDJPY
+  - USDCAD
+  - AUDUSD
+  - EURCHF
+  - EURJPY
+  - EURGBP
+  - EURCAD
+  - GBPCHF
+  - GBPJPY
+  - AUDJPY
+  - AUDNZD
+  - AUDCHF
+  - CHFJPY
+  - EURAUD
+  - EURNZD
+  - CADCHF
+  - GBPAUD
+  - GBPCAD
+  - GBPNZD
+  - NZDCAD
+  - NZDCHF
+  - NZDJPY
+  - NZDUSD
+  - CADJPY

@@ -1,0 +1,24 @@
+---
+name: nonlagdot
+inputs:
+# ENUM_APPLIED_PRICE Price=1
+  - - 0.0
+    - 6.0
+    - 1.0
+# ENUM_MA_METHOD Type=0
+  - - 0.0
+    - 3.0
+    - 1.0
+# Length=10
+  - - 5.0
+    - 18.0
+    - 1.0
+# Filter=0
+  - - 0.0
+    - 100.0
+    - 20.0
+# Deviation=0 // Swing
+  - - 0.0
+# Shift=0
+  - - 0.0
+shift: 0

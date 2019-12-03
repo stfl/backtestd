@@ -29,9 +29,9 @@ struct Row {
     input_params: Vec<f32>,
 }
 
+// TODO impl TryFrom::<Vec<String>> for ResultRow
 impl Row {
     pub fn from_vec(vec: &Vec<String>) -> Row {
-        println!("{:?}", vec);
         let mut iter = vec.iter();
         let row = Row {
             pass: iter.next().unwrap().parse().unwrap(),

@@ -353,12 +353,20 @@ pub fn to_terminal_config(
     let mut reports_path_relative = common.reports.join(&run.name).join(symbol);
     reports_path_relative.set_extension("xml");
     let reports_path_relative = reports_path_relative.as_os_str();
-    Ok(format!(
-        "[Tester]
+    /* MQL5Login=stfl
+     * MQL5Password=A88CCCC34E5793E0DDF44A91650F590F896D251CFD0693E07A91B6FD2FD95F151D012C23434C3683677EE128B15BE298FDE1C8BF3A4365B2
+     * MQL5UseStorage=1 */
+    Ok(format!("[Common]
+Login={login}
+ProxyEnable=0
+CertInstall=0
+NewsEnable=0
+[Tester]
 {common}
 {run}
 Symbol={symb}
 Report={report}",
+        login = &common.login,
         common = common.to_config(),
         run = run.to_config(),
         symb = symbol,
@@ -711,7 +719,7 @@ Report=reports/test/USDCHF.xml"
         assert_eq!(IndicatorSet::from(indi_set.clone()), run.indi_set);
 
         let run_cl = run.clone();
-        let rpf: RunParams = RunParamsFile {
+        let rpf = RunParamsFile {
             name: run_cl.name,
             indi_set: indi_set.into(),
             date: run_cl.date,
@@ -720,8 +728,10 @@ Report=reports/test/USDCHF.xml"
             optimize_crit: run_cl.optimize_crit,
             visual: run_cl.visual,
             symbols: run_cl.symbols,
-        }
-        .into();
-        assert_eq!(rpf, run);
+        };
+
+        let _ = serde_any::to_file("/tmp/run.yaml", &rpf);
+
+        assert_eq!(RunParams::from(rpf), run);
     }
 }

@@ -1,0 +1,28 @@
+---
+name: sidus
+inputs:
+   # m_FastEMA=18;
+  - - 13.0
+    - 23.0
+    - 1.0
+   # m_SlowEMA=28;
+  - - 23.0
+    - 35.0
+    - 1.0
+   # m_FastLWMA=5;
+  - - 2.0
+    - 8.0
+    - 1.0
+   # m_SlowLWMA=8;
+  - - 5.0
+    - 14.0
+    - 1.0
+   # m_IPC=PRICE_CLOSE;
+  - - 0.0
+    - 6.0
+    - 1.0
+   # m_Digit=0;
+  - - 0.0
+    - 100.0
+    - 20.0
+shift: 0

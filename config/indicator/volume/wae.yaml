@@ -1,18 +1,17 @@
 ---
 name: wae
-indi_type: 1
 inputs:
   # Fast_MA=20
-  - - 14.0
-    - 30.0
+  - - 15.0
+    - 25.0
     - 2.0
   # Slow_MA=40
-  - - 20.0
+  - - 30.0
     - 50.0
     - 2.0
   # BBPeriod=20
-  - - 14.0
-    - 30.0
+  - - 15.0
+    - 25.0
     - 2.0
   # BBDeviation=2
   - - 1.0
@@ -20,7 +19,7 @@ inputs:
     - 1.0
   # Sensetive=150
   - - 50.0
-    - 350.0
+    - 250.0
     - 50.0
   # DeadZonePip=400
   - - 400.0
@@ -28,7 +27,7 @@ inputs:
   - - 15.0
   # TrendPower=150
   - - 50.0
-    - 350.0
+    - 250.0
     - 50.0
   # AlertWindow=false
   # AlertCount=2

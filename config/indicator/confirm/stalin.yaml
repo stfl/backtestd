@@ -1,0 +1,33 @@
+---
+name: stalin
+inputs:
+# ENUM_MA_METHOD 
+  #   m_MAMethod=MODE_EMA;
+  - - 0.0
+    - 3.0
+    - 1.0
+  #   m_MAShift=0;
+  - - 0.0
+    - 1.0
+    - 1.0
+  #   m_Fast=14;
+  - - 10.0
+    - 20.0
+    - 2.0
+  #   m_Slow=21;
+  - - 18.0
+    - 28.0
+    - 2.0
+  #   m_RSI=17;
+  - - 13.0
+    - 23.0
+    - 2.0
+  #   m_Confirm=0;
+  - - 0.0
+    - 100.0
+    - 20.0
+  #   m_Flat=0;
+  - - 0.0
+    - 5.0
+    - 1.0
+shift: 0

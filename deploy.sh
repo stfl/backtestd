@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-[[ x"$1" == x"" ]] && (echo "need target dir"; exit 1)
+[[ x"$1" == x"" ]] && echo "need target dir" && exit 0
 
 cargo build --release --target x86_64-pc-windows-gnu
 

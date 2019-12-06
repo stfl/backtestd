@@ -57,6 +57,7 @@ pub enum IndicatorType {
     ZeroLineCross,
     TwoLinesCross,
     OnChart,
+    Semaphore,
 }
 
 pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Result<()> {
@@ -182,7 +183,7 @@ pub fn generate_signal_includes(path: &PathBuf) -> Result<()> {
             })
         })
         .collect();
-    info!("generating AllSingnals.mqh for {:#?}", headers);
+    debug!("generating AllSingnals.mqh for {:#?}", headers);
     let out = generate_includes(headers);
     // TSignalTestODO write out to AllSignals.mqh
     //

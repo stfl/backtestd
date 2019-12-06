@@ -89,8 +89,8 @@ fn main() {
         (@subcommand gen =>
             (about: "generate an indicator signal")
             (@arg INPUT: +required "yaml file the specifies signal params")
-            (@arg HEADER: -h --("header-out-dir") "signal header source output dir")
-            (@arg INDI: -i --("indi-out-dir") "indicator params output dir")
+            (@arg HEADER: -h --("header-out-dir") +takes_value "signal header source output dir")
+            (@arg INDI: -i --("indi-out-dir") +takes_value "indicator params output dir")
         )
     )
     .get_matches();

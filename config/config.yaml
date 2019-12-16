@@ -10,7 +10,7 @@ use_remote: true
 use_local: true
 replace_report: true
 shutdown_terminal: true
-deposit: 10000
+deposit: 100000
 currency: USD
-leverage: 100
+leverage: 500
 execution_mode: 0

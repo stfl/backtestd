@@ -39,16 +39,16 @@ impl BacktestRunner {
     }
 
     fn write_indi_params(&self) -> Result<()> {
-        // TODO mkdir
+        debug!("writing {:?}", self.common.params_path());
         let mut file = File::create(self.common.params_path())?;
-        file.write_all(self.run.to_params_config().unwrap().as_bytes())?;
+        file.write_all(self.run.to_params_config()?.as_bytes())?;
         Ok(())
     }
 
-    fn write_terminal_config(&self, symbol: &String) -> Result<()> {
-        // TODO mkdir
+    fn write_terminal_config(&self) -> Result<()> {
+        debug!("writing {:?}", self.common.params_path());
         let mut file = File::create(self.common.workdir.join("terminal.ini").as_path())?;
-        file.write_all(to_terminal_config(&self.common, &self.run, symbol)?.as_bytes())?;
+        file.write_all(to_terminal_config(&self.common, &self.run)?.as_bytes())?;
         Ok(())
     }
 
@@ -80,29 +80,33 @@ impl BacktestRunner {
         Ok(output.status)
     }
 
-    pub fn run_backtest(&self) -> Result<bool> {
+    pub fn run_backtest(&self, keep_reports: bool) -> Result<bool> {
         self.write_indi_params()?;
         fs::create_dir_all(get_reports_dir(&self.common, &self.run)?)?;
-        for symbol in self.run.symbols.iter() {
-            self.write_terminal_config(&symbol)?;
-            self.run_terminal()?;
-            let results = self.collect_report(&symbol)?;
-            self.delete_report(&symbol)?;
+        self.write_terminal_config()?;
+        self.run_terminal()?;
+        // TODO for parallel exec, randomly generte the output path
+        let results = self.collect_report()?;
+
+        if !keep_reports {
+            self.delete_report()?;
+            // self.push_results_to_database().context(DbError)?;
+            // TODO cannot delete if not empty
+            fs::remove_dir(get_reports_dir(&self.common, &self.run)?)?;
         }
-        // self.push_results_to_database().context(DbError)?;
-        fs::remove_dir(get_reports_dir(&self.common, &self.run)?)?;
         Ok(true)
     }
 
-    fn delete_report(&self, symbol: &String) -> Result<()> {
-        let report = get_reports_path(&self.common, &self.run, symbol)?;
+    fn delete_report(&self) -> Result<()> {
+        let report = get_reports_path(&self.common, &self.run)?;
         debug!("deleting report {}", report.to_string_lossy());
         fs::remove_file(report)?;
         Ok(())
     }
 
-    fn collect_report(&self, symbol: &String) -> Result<Vec<ResultRow>> {
-        let results = read_results_xml(get_reports_path(&self.common, &self.run, symbol)?)?;
+    fn collect_report(&self) -> Result<Vec<BacktestResult>> {
+        let results = read_results_xml(&self.run.indi_set,
+          get_reports_path(&self.common, &self.run)?)?;
         trace!("{:?}", results);
         Ok(results)
     }

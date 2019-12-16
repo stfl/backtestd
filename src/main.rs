@@ -2,6 +2,9 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
+#![feature(test)]
+
+extern crate test;
 
 #[macro_use]
 extern crate lazy_static;
@@ -19,6 +22,8 @@ extern crate log;
 #[macro_use]
 extern crate clap;
 use clap::{App, Arg, SubCommand};
+
+extern crate chrono;
 
 mod backtest_runner;
 mod params;
@@ -85,6 +90,7 @@ fn main() {
         (@subcommand run =>
             (about: "run a backtest")
             (@arg INPUT: +required "yaml file the specifies the run params")
+            (@arg KEEP: -k --("keep-reports") "keep the xml reports")
         )
         (@subcommand gen =>
             (about: "generate an indicator signal")
@@ -145,93 +151,8 @@ fn main() {
             .into();
         debug!("run: {:#?}", run);
         let runner = BacktestRunner::new(run, config.clone());
-        let _ = runner.run_backtest().expect("running backtest failed");
+        let _ = runner
+            .run_backtest(matches.is_present("KEEP"))
+            .expect("running backtest failed");
     }
-
-    // let common = CommonParams {
-    //     params_file: "expert_params.set".to_string(),
-    //     terminal_exe: PathBuf::from(r"C:\Program Files\MetaTrader 5\terminal64.exe"),
-    //     workdir: workdir.to_path_buf(),
-    //     reports: PathBuf::from("reports"),
-    //     expert: r"BacktestExpert\nnfx-ea\nnfx-ea.ex5".to_string(),
-    //     period: "D1".to_string(),
-    //     login: "5152".to_string(),
-    //     use_remote: true,
-    //     use_local: true,
-    //     replace_report: true,
-    //     shutdown_terminal: true,
-    //     deposit: 10000,
-    //     currency: "USD".to_string(),
-    //     leverage: 100,
-    //     execution_mode: 0,
-    // };
-
-    // let run = RunParams {
-    //     name: "asctrend_wae".to_string(),
-    //     indi_set: IndicatorSet {
-    //         confirm: Some(Indicator {
-    //             name: "asctrend".to_string(),
-    //             inputs: vec![vec![1., 20., 1.]],
-    //             shift: 0,
-    //         }),
-    //         confirm2: None,
-    //         confirm3: None,
-    //         exit: None,
-    //         cont: None,
-    //         baseline: None,
-    //         volume: Some(
-    //             serde_any::from_file(
-    //                 common
-    //                     .workdir
-    //                     .join("wae.yaml")
-    //                     .as_os_str()
-    //                     .to_str()
-    //                     .unwrap(),
-    //             )
-    //             .unwrap(),
-    //         ),
-    //     },
-    //     date: ("2017.08.01".to_string(), "2019.08.20".to_string()),
-    //     backtest_model: BacktestModel::OpenPrice,
-    //     optimize: OptimizeMode::Complete,
-    //     optimize_crit: OptimizeCrit::Custom,
-    //     visual: false,
-    //     symbols: vec!["EURUSD".to_string(), "AUDCAD".into()],
-    // };
-
-    // println!(
-    //     "writing to {:?}",
-    //     common
-    //         .workdir
-    //         .join("run.json")
-    //         .as_os_str()
-    //         .to_str()
-    //         .unwrap()
-    // );
-
-    /* serde_any::to_file(
-     *     common
-     *         .workdir
-     *         .join("run.yaml")
-     *         .as_os_str()
-     *         .to_str()
-     *         .unwrap(),
-     *     &run,
-     * )
-     * .unwrap();
-     * serde_any::to_file(
-     *     common
-     *         .workdir
-     *         .join("wae.yaml")
-     *         .as_os_str()
-     *         .to_str()
-     *         .unwrap(),
-     *     &run.indi_set.volume,
-     * )
-     * .unwrap(); */
-
-    /* common.to_file(common.workdir.join("common.json").as_os_str().to_str().unwrap()).expect("can't write file");
-     * run.to_file(common.workdir.join("run.json").as_os_str().to_str().unwrap()).expect("can't write file"); */
-    // let runner = BacktestRunner::new(run.clone(), common.clone());
-    // runner.run_backtest().unwrap();
 }

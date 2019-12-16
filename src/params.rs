@@ -1,13 +1,16 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use std::collections::VecDeque;
+use std::convert::TryFrom;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io;
 use std::path::{Path, PathBuf};
 
 use anyhow::{ensure, Context, Result};
-
+use chrono::prelude::*;
+use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, json};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -19,7 +22,7 @@ const FOREX_PAIRS: &'static [&'static str] = &[
     "CADJPY",
 ];
 
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
 pub struct Indicator {
     pub name: String,
     pub inputs: Vec<Vec<f32>>,
@@ -60,6 +63,29 @@ impl Indicator {
         let json_file = File::create(Path::new(file))?;
         Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
     }
+
+    fn parse_result_set(&self, result_params: &mut VecDeque<f32>) -> Self {
+        Indicator {
+            name: self.name.clone(),
+            shift: self.shift,
+            inputs: self
+                .inputs
+                .clone()
+                .into_iter()
+                .map(|inp| {
+                    if (3..=4).contains(&inp.len()) {
+                        vec![result_params
+                            .pop_front()
+                            .expect("no more params found in result")]
+                    // TODO we MUST have a value here otherwise something went wrong with the test run
+                    // TODO assert value is in range
+                    } else {
+                        inp
+                    }
+                })
+                .collect(),
+        }
+    }
 }
 
 fn input_param_str(input: &Vec<f32>) -> Result<String> {
@@ -73,7 +99,7 @@ fn input_param_str(input: &Vec<f32>) -> Result<String> {
     }
 }
 
-#[derive(Default, Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
 pub struct IndicatorSet {
     pub confirm: Option<Indicator>,
     pub confirm2: Option<Indicator>,
@@ -118,14 +144,51 @@ impl IndicatorSet {
 
         Ok(string)
     }
+
+    pub fn parse_result_set(&self, mut result_params: VecDeque<f32>) -> IndicatorSet {
+        IndicatorSet {
+            confirm: self
+                .confirm
+                .as_ref()
+                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+            confirm2: self
+                .confirm2
+                .as_ref()
+                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+            confirm3: self
+                .confirm3
+                .as_ref()
+                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+            exit: self
+                .exit
+                .as_ref()
+                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+            cont: self
+                .cont
+                .as_ref()
+                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+            baseline: self
+                .baseline
+                .as_ref()
+                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+            volume: self
+                .volume
+                .as_ref()
+                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+        }
+    }
 }
 
+// TODO impl Iterator
+// create a indi_list Vec<&Indicator>
+// return indi_list.iter();
+
 // input from the API
-#[derive(Default, Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct RunParams {
     pub name: String,
     pub indi_set: IndicatorSet,
-    pub date: (String, String),
+    pub date: (DateTime<Utc>, DateTime<Utc>),
     pub backtest_model: BacktestModel,
     pub optimize: OptimizeMode,
     pub optimize_crit: OptimizeCrit,
@@ -136,7 +199,17 @@ pub struct RunParams {
 
 impl RunParams {
     pub fn to_params_config(&self) -> Result<String> {
-        return Ok(self.indi_set.to_params_config()?);
+        let mut string = self.indi_set.to_params_config()?;
+        for (i, symbol) in self.symbols.iter().enumerate() {
+            string.push_str(&format!(
+                "Expert_symbol{idx}={symbol}\n",
+                symbol = symbol,
+                idx = i,
+            ));
+        }
+        // string.push_str(&format!("Expert_Symbols={}", self.symbols.join(" ")));
+        debug!("Params config for terminal:\n{}", string);
+        return Ok(string);
     }
 
     fn to_config(&self) -> String {
@@ -149,28 +222,32 @@ Model={model}
 Optimization={opti}
 OptimizationCriterion={opti_crit}",
             visual = self.visual as i32,
-            from_date = self.date.0,
-            to_date = self.date.1,
+            from_date = DateTime::format(&self.date.0, "%Y.%m.%d"),
+            to_date = DateTime::format(&self.date.1, "%Y.%m.%d"),
             model = self.backtest_model as u8,
             opti = self.optimize as u8,
             opti_crit = self.optimize_crit as u8
         )
     }
 
-    pub fn new() -> Self {
-        RunParams {
-            name: "backtest".to_string(),
-            indi_set: IndicatorSet::default(),
-            date: ("2017.08.01".to_string(), "2019.08.20".to_string()),
-            backtest_model: BacktestModel::default(),
-            optimize: OptimizeMode::default(),
-            optimize_crit: OptimizeCrit::default(),
-            visual: false,
-            symbols: FOREX_PAIRS.iter().map(|s| s.to_string()).collect(),
-            // to_vec().to_string(),
-            // symbols_iter : symbols.iter()
-        }
-    }
+    // TODO remove new() function which sets too many defaults
+    /* pub fn new() -> Self {
+     *     RunParams {
+     *         name: "backtest".to_string(),
+     *         indi_set: IndicatorSet::default(),
+     *         date: (
+     *             DateTime::parse_from_rfc3339("2017-08-01").unwrap().into(),
+     *             DateTime::parse_from_rfc3339("2019-08-20").unwrap().into(),
+     *         ),
+     *         backtest_model: BacktestModel::default(),
+     *         optimize: OptimizeMode::default(),
+     *         optimize_crit: OptimizeCrit::default(),
+     *         visual: false,
+     *         symbols: FOREX_PAIRS.iter().map(|s| s.to_string()).collect(),
+     *         // to_vec().to_string(),
+     *         // symbols_iter : symbols.iter()
+     *     }
+     * } */
 
     pub fn from_file(file: &str) -> Result<Self> {
         let json_file = File::open(Path::new(file))?;
@@ -191,7 +268,8 @@ OptimizationCriterion={opti_crit}",
 pub struct RunParamsFile {
     pub name: String,
     pub indi_set: IndicatorSetFile,
-    pub date: (String, String),
+    // pub date: (String, String),
+    pub date: (DateTime<Utc>, DateTime<Utc>),
     pub backtest_model: BacktestModel,
     pub optimize: OptimizeMode,
     pub optimize_crit: OptimizeCrit,
@@ -199,11 +277,20 @@ pub struct RunParamsFile {
     pub symbols: Vec<String>,
 }
 
+// impl TryFrom<RunParamsFile> for RunParams {
 impl From<RunParamsFile> for RunParams {
+    // type Error = anyhow::Error;
+
+    // fn try_from(s: RunParamsFile) -> Result<Self, Self::Error> {
     fn from(s: RunParamsFile) -> Self {
+        // Ok(
         RunParams {
             name: s.name,
             indi_set: s.indi_set.into(),
+            /* date: (
+             *     DateTime::parse_from_rfc3339(&s.date.0)?.into(),
+             *     DateTime::parse_from_rfc3339(&s.date.1)?.into(),
+             * ), */
             date: s.date,
             backtest_model: s.backtest_model,
             optimize: s.optimize,
@@ -211,6 +298,7 @@ impl From<RunParamsFile> for RunParams {
             visual: s.visual,
             symbols: s.symbols,
         }
+        // )
     }
 }
 
@@ -249,7 +337,7 @@ impl From<IndicatorSetFile> for IndicatorSet {
 }
 
 // terminal execution specific configuration
-#[derive(Default, Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct CommonParams {
     pub params_file: String,
     pub terminal_exe: PathBuf,
@@ -270,27 +358,27 @@ pub struct CommonParams {
 }
 
 impl CommonParams {
-    pub fn new(workdir: &Path) -> Self {
-        CommonParams {
-            params_file: "expert_params.set".to_string(),
-            terminal_exe: PathBuf::from(r"C:\Program Files\MetaTrader 5\terminal64.exe"),
-            workdir: workdir.to_path_buf(),
-            reports: PathBuf::from("reports"),
-            // expert : "nnfx-ea/nnfx-ea.ex5".to_string(),
-            expert: r"expert\expert.ex5".to_string(),
-            period: "D1".to_string(),
-            login: "".to_string(),
-            use_remote: true,
-            use_local: true,
-            replace_report: true,
-            shutdown_terminal: true,
-            deposit: 10000,
-            currency: "USD".to_string(),
-            leverage: 100,
-            execution_mode: 0,
-            // run_params : run,
-        }
-    }
+    /* pub fn new(workdir: &Path) -> Self {
+     *     CommonParams {
+     *         params_file: "expert_params.set".to_string(),
+     *         terminal_exe: PathBuf::from(r"C:\Program Files\MetaTrader 5\terminal64.exe"),
+     *         workdir: workdir.to_path_buf(),
+     *         reports: PathBuf::from("reports"),
+     *         // expert : "nnfx-ea/nnfx-ea.ex5".to_string(),
+     *         expert: r"expert\expert.ex5".to_string(),
+     *         period: "D1".to_string(),
+     *         login: "".to_string(),
+     *         use_remote: true,
+     *         use_local: true,
+     *         replace_report: true,
+     *         shutdown_terminal: true,
+     *         deposit: 10000,
+     *         currency: "USD".to_string(),
+     *         leverage: 100,
+     *         execution_mode: 0,
+     *         // run_params : run,
+     *     }
+     * } */
 
     pub fn from_file(file: &str) -> Result<Self> {
         let json_file = File::open(Path::new(file))?;
@@ -345,18 +433,15 @@ ExecutionMode={exec_mode}",
     }
 }
 
-pub fn to_terminal_config(
-    common: &CommonParams,
-    run: &RunParams,
-    symbol: &String,
-) -> Result<String> {
-    let mut reports_path_relative = common.reports.join(&run.name).join(symbol);
-    reports_path_relative.set_extension("xml");
+pub fn to_terminal_config(common: &CommonParams, run: &RunParams) -> Result<String> {
+    let reports_path_relative = common.reports.join(&run.name).join("reports.xml");
+    // reports_path_relative.set_extension("xml");
     let reports_path_relative = reports_path_relative.as_os_str();
     /* MQL5Login=stfl
      * MQL5Password=A88CCCC34E5793E0DDF44A91650F590F896D251CFD0693E07A91B6FD2FD95F151D012C23434C3683677EE128B15BE298FDE1C8BF3A4365B2
      * MQL5UseStorage=1 */
-    Ok(format!("[Common]
+    Ok(format!(
+        "[Common]
 Login={login}
 ProxyEnable=0
 CertInstall=0
@@ -369,7 +454,13 @@ Report={report}",
         login = &common.login,
         common = common.to_config(),
         run = run.to_config(),
-        symb = symbol,
+        symb = run
+            .symbols
+            .iter()
+            .max_by(|x, y| x.cmp(y))
+            // XXX take the alphanumerical. This causes the bar times to be correct
+            // this is a very vage assumtion and needs to be double and tripple checked in the EA
+            .context("sorting symbols failed")?,
         report = reports_path_relative.to_string_lossy()
     ))
 }
@@ -382,13 +473,9 @@ pub fn get_reports_dir(common: &CommonParams, run: &RunParams) -> Result<PathBuf
     Ok(common.workdir.join(common.reports.join(&run.name)))
 }
 
-pub fn get_reports_path(
-    common: &CommonParams,
-    run: &RunParams,
-    symbol: &String,
-) -> Result<PathBuf> {
-    let mut reports_path = get_reports_dir(&common, &run)?.join(symbol);
-    reports_path.set_extension("xml");
+pub fn get_reports_path(common: &CommonParams, run: &RunParams) -> Result<PathBuf> {
+    let reports_path = get_reports_dir(&common, &run)?.join("reports.xml");
+    // reports_path.set_extension("xml");
     Ok(reports_path)
 }
 
@@ -502,36 +589,77 @@ Baseline_Shift=7
         assert!(indi.to_params_config("Baseline").is_err());
     }
 
-    #[test]
-    #[cfg(unix)]
-    fn terminal_config_params_path_test() {
-        let term_params = CommonParams {
-            workdir: PathBuf::from(r"C:/workdir"),
-            params_file: "test.set".to_string(),
-            ..Default::default()
-        };
-        assert_eq!(
-            term_params.params_path().as_path(),
-            Path::new(r"C:/workdir/MQL5/Profiles/Tester/test.set")
-        );
-
-        let term_params = CommonParams::new(Path::new(
-            r"C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075",
-        ));
-        assert_eq!(
-            term_params.params_path().as_path(),
-            Path::new(
-                r"C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Profiles/Tester/expert_params.set"
-            )
-        );
-    }
+    /*     #[test]
+     *     #[cfg(unix)]
+     *     fn terminal_config_params_path_test() {
+     *         let term_params = CommonParams {
+     *             workdir: PathBuf::from(r"C:/workdir"),
+     *             params_file: "test.set".to_string(),
+     *             ..Default::default()
+     *         };
+     *         assert_eq!(
+     *             term_params.params_path().as_path(),
+     *             Path::new(r"C:/workdir/MQL5/Profiles/Tester/test.set")
+     *         );
+     *
+     *         let term_params = CommonParams::new(Path::new(
+     *             r"C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075",
+     *         ));
+     *         assert_eq!(
+     *             term_params.params_path().as_path(),
+     *             Path::new(
+     *                 r"C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Profiles/Tester/expert_params.set"
+     *             )
+     *         );
+     *     } */
 
     #[test]
     #[cfg(unix)]
     fn reports_dir_test() {
-        let common = CommonParams::new(Path::new("C:/workdir"));
-        let mut run = RunParams::new();
-        run.name = "test".to_string();
+        let common = CommonParams {
+            params_file: "expert_params.set".to_string(),
+            terminal_exe: PathBuf::from(r"C:\terminal64.exe"),
+            workdir: PathBuf::from(r"C:/workdir"),
+            reports: PathBuf::from("reports"),
+            expert: r"expert\expert.ex5".to_string(),
+            period: "D1".to_string(),
+            login: "1234".to_string(),
+            use_remote: true,
+            use_local: true,
+            replace_report: true,
+            shutdown_terminal: true,
+            deposit: 10000,
+            currency: "USD".to_string(),
+            leverage: 100,
+            execution_mode: 0,
+        };
+
+        let run = RunParams {
+            name: "test".to_string(),
+            indi_set: IndicatorSet {
+                confirm: None,
+                confirm2: None,
+                confirm3: None,
+                exit: None,
+                cont: None,
+                baseline: None,
+                volume: None,
+            },
+            date: (
+                DateTime::parse_from_rfc3339("2017-08-01T00:00:00-00:00")
+                    .unwrap()
+                    .into(),
+                DateTime::parse_from_rfc3339("2019-08-20T00:00:00-00:00")
+                    .unwrap()
+                    .into(),
+            ),
+            backtest_model: BacktestModel::EveryTick,
+            optimize: OptimizeMode::Complete,
+            optimize_crit: OptimizeCrit::Custom,
+            visual: false,
+            symbols: vec!["USDCHF".to_string()],
+        };
+
         assert_eq!(
             get_reports_dir(&common, &run).unwrap().as_path(),
             PathBuf::from(r"C:/workdir/reports/").join("test")
@@ -547,43 +675,106 @@ Baseline_Shift=7
         );
 
         assert_eq!(
-            (*get_reports_path(&common, &run, &"USDCHF".to_string()).unwrap()).to_str(),
-            Some(r"C:/workdir/reports/test/USDCHF.xml")
+            (*get_reports_path(&common, &run).unwrap()).to_str(),
+            Some(r"C:/workdir/reports/test/reports.xml")
         );
     }
 
-    #[test]
-    fn run_iter_test() {
-        let mut run = RunParams::new();
-        run.symbols = vec!["USDCHF", "USDJPY", "USDCAD"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-        let mut sym_iter = run.iter();
-        assert_eq!(sym_iter.next().unwrap(), "USDCHF");
-        assert_eq!(sym_iter.next().unwrap(), "USDJPY");
-    }
+    /* #[test]
+     * fn run_iter_test() {
+     *     let mut run = RunParams::new();
+     *     run.symbols = vec!["USDCHF", "USDJPY", "USDCAD"]
+     *         .iter()
+     *         .map(|s| s.to_string())
+     *         .collect();
+     *     let mut sym_iter = run.iter();
+     *     assert_eq!(sym_iter.next().unwrap(), "USDCHF");
+     *     assert_eq!(sym_iter.next().unwrap(), "USDJPY");
+     * } */
 
     #[test]
     #[cfg(unix)]
     fn to_terminal_config_test() {
-        let common = CommonParams::new(Path::new(r"C:/workdir"));
-        let mut run = RunParams::new();
-        run.symbols = vec!["USDCHF", "USDJPY", "USDCAD"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-        run.name = "test".to_string();
-        let mut sym_iter = run.iter();
+        let common = CommonParams {
+            params_file: "expert_params.set".to_string(),
+            terminal_exe: PathBuf::from(r"C:\terminal64.exe"),
+            workdir: PathBuf::from(r"C:\workdir"),
+            reports: PathBuf::from("reports"),
+            expert: r"expert\expert.ex5".to_string(),
+            period: "D1".to_string(),
+            login: "1234".to_string(),
+            use_remote: true,
+            use_local: true,
+            replace_report: true,
+            shutdown_terminal: true,
+            deposit: 10000,
+            currency: "USD".to_string(),
+            leverage: 100,
+            execution_mode: 0,
+        };
+
+        let run = RunParams {
+            name: "test".to_string(),
+            indi_set: IndicatorSet {
+                confirm: Some(Indicator {
+                    name: "ma".to_string(),
+                    inputs: vec![vec![1.], vec![1., 100., 3.]],
+                    shift: 0,
+                }),
+                confirm2: Some(Indicator {
+                    name: "ma2".to_string(),
+                    inputs: vec![vec![1.], vec![10., 200., 5.]],
+                    shift: 1,
+                }),
+                confirm3: None,
+                exit: Some(Indicator {
+                    name: "exitor".to_string(),
+                    inputs: vec![vec![14., 100., 3.], vec![1., 30., 2.]],
+                    shift: 2,
+                }),
+                cont: None,
+                baseline: Some(Indicator {
+                    name: "Ichy".to_string(),
+                    inputs: vec![vec![41.], vec![10.]],
+                    shift: 0,
+                }),
+                volume: Some(Indicator {
+                    name: "WAE".to_string(),
+                    inputs: vec![vec![7.], vec![222.]],
+                    shift: 0,
+                }),
+            },
+            date: (
+                DateTime::parse_from_rfc3339("2017-08-01T00:00:00-00:00")
+                    .unwrap()
+                    .into(),
+                DateTime::parse_from_rfc3339("2019-08-20T00:00:00-00:00")
+                    .unwrap()
+                    .into(),
+            ),
+            backtest_model: BacktestModel::EveryTick,
+            optimize: OptimizeMode::Complete,
+            optimize_crit: OptimizeCrit::Custom,
+            visual: false,
+            symbols: vec!["USDCHF", "AUDCAD", "USDJPY", "USDCAD"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+        };
 
         assert_eq!(
-            to_terminal_config(&common, &run, sym_iter.next().unwrap()).unwrap(),
-            r"[Tester]
+            to_terminal_config(&common, &run).unwrap(),
+            r"[Common]
+Login=1234
+ProxyEnable=0
+CertInstall=0
+NewsEnable=0
+[Tester]
 
 Expert=expert\expert.ex5
 ExpertParameters=expert_params.set
 Period=D1
-Login=
+Login=1234
 UseLocal=1
 UseRemote=1
 ReplaceReport=1
@@ -596,11 +787,11 @@ ExecutionMode=0
 Visual=0
 FromDate=2017.08.01
 ToDate=2019.08.20
-Model=2
+Model=0
 Optimization=1
 OptimizationCriterion=6
-Symbol=USDCHF
-Report=reports/test/USDCHF.xml"
+Symbol=USDJPY
+Report=reports/test/reports.xml"
         );
     }
 
@@ -674,7 +865,14 @@ Report=reports/test/USDCHF.xml"
                     shift: 0,
                 }),
             },
-            date: ("2017.08.01".to_string(), "2019.08.20".to_string()),
+            date: (
+                DateTime::parse_from_rfc3339("2017-08-01T00:00:00-00:00")
+                    .unwrap()
+                    .into(),
+                DateTime::parse_from_rfc3339("2019-08-20T00:00:00-00:00")
+                    .unwrap()
+                    .into(),
+            ),
             backtest_model: BacktestModel::EveryTick,
             optimize: OptimizeMode::Complete,
             optimize_crit: OptimizeCrit::Custom,
@@ -690,7 +888,7 @@ Report=reports/test/USDCHF.xml"
             "cont":null,
             "baseline":{"name":"Ichy","inputs":[[41.0],[10.0]],"shift":0},
             "volume":{"name":"WAE","inputs":[[7.0],[222.0]],"shift":0}},
-            "date":["2017.08.01","2019.08.20"],
+            "date":["2017-08-01T00:00:00-00:00","2019-08-20T00:00:00-00:00"],
             "backtest_model":0, "optimize":1,"optimize_crit":6,"visual":false,
             "symbols":["EURUSD","AUDCAD"]}"#;
 
@@ -734,4 +932,12 @@ Report=reports/test/USDCHF.xml"
 
         assert_eq!(RunParams::from(rpf), run);
     }
+
+    /* #[test]
+     * fn parse_from_results() {
+     *     unimplemented!();
+     *   // TODO test input list length
+     *   // TODO test if output IndicatorSet has 0 range inputs
+     *   // TODO test if param resul is in the range of the input range
+     * } */
 }

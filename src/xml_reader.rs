@@ -2,17 +2,20 @@
 #![allow(unused_extern_crates)]
 #![allow(dead_code)]
 
-use quick_xml::events::Event;
-use quick_xml::Reader;
-use std::path::Path;
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 // use std::string::String::from_utf8_lossy;
 use std::borrow::Cow;
+use std::collections::{BTreeMap, HashMap};
+
+use super::params::*;
 
 use anyhow::{Context, Result};
-
+use quick_xml::events::Event;
+use quick_xml::Reader;
 use serde_derive;
-
-use std::{fs, io, path::PathBuf};
 
 #[derive(Debug, Deserialize, PartialEq)]
 struct Row {
@@ -29,86 +32,61 @@ struct Row {
     input_params: Vec<f32>,
 }
 
-// TODO impl TryFrom::<Vec<String>> for ResultRow
-impl Row {
-    pub fn from_vec(vec: &Vec<String>) -> Row {
-        let mut iter = vec.iter();
-        let row = Row {
-            pass: iter.next().unwrap().parse().unwrap(),
-            result: iter.next().unwrap().parse().unwrap(),
-            profit: iter.next().unwrap().parse().unwrap(),
-            expected_payoff: iter.next().unwrap().parse().unwrap(),
-            profit_factor: iter.next().unwrap().parse().unwrap(),
-            recovery_factor: iter.next().unwrap().parse().unwrap(),
-            sharpe_ratio: iter.next().unwrap().parse().unwrap(),
-            custom_result: iter.next().unwrap().parse().unwrap(),
-            equity_dd: iter.next().unwrap().parse().unwrap(),
-            trades: iter.next().unwrap().parse().unwrap(),
-            input_params: iter.map(|s| s.parse().unwrap()).collect(),
-        };
-        row
-    }
-}
-
 #[derive(Debug, Deserialize, PartialEq)]
-pub struct ResultRow {
+pub struct BacktestResult {
+    indi_set: IndicatorSet,
     profit: f32,
     result: f32,
     trades: u32,
-    input_params: Vec<f32>,
 }
 
-impl ResultRow {
-    pub fn try_from_vec(vec: &Vec<String>) -> Result<ResultRow> {
-        let row = ResultRow {
-            profit: vec[2].parse().context("Parsing Numeric failed")?,
-            result: vec[7].parse().context("Parsing Numeric failed")?,
-            trades: vec[9].parse().context("Parsing Numeric failed")?,
-            input_params: vec[10..].iter().map(|s| s.parse().unwrap()).collect(),
-            // TODO identify the input_params_set and store the hash or sth
-            // generate a reproducable hash xxHash?
-        };
-        Ok(row)
-    }
-}
+// pub struct ResultMap<IndicatorSet, BacktestResult>
 
-pub fn read_results_xml(results_file: PathBuf) -> Result<Vec<ResultRow>> {
+pub fn read_results_xml(
+    input_indi_set: &IndicatorSet,
+    results_file: PathBuf,
+) -> Result<Vec<BacktestResult>> {
     let mut report_reader = Reader::from_file(results_file.as_path())?;
     report_reader.trim_text(true);
     let mut count = 0;
     let mut buf = Vec::new();
-    let mut txt = Vec::new();
+    let mut txt = Vec::<String>::new();
     let mut rows = Vec::new(); // may be larger as well
+                               // let mut results: HashMap<IndicatorSet, BacktestResult>::new();
     loop {
-        match report_reader
-            .read_event(&mut buf)
-            .context("Failed to decode XML")?
-        {
-            Event::Start(ref e) => {
-                match std::str::from_utf8(e.local_name()).context("Failed to decode XML")? {
-                    "Row" => {
+        match report_reader.read_event(&mut buf) {
+            Ok(Event::Start(ref e)) => {
+                match e.local_name() {
+                    b"Row" => {
                         count += 1;
                         txt.clear(); // delete the values but keep the capacity
                     }
                     _ => (),
                 }
             }
-            Event::End(ref e) => {
-                match std::str::from_utf8(e.local_name()).context("Failed to decode XML")? {
-                    "Row" => {
+            Ok(Event::End(ref e)) => {
+                match e.local_name() {
+                    b"Row" => {
                         if count > 1 {
                             // ignore the header row
-                            rows.push(ResultRow::try_from_vec(&txt)?);
+                            rows.push(BacktestResult {
+                                indi_set: input_indi_set.parse_result_set(
+                                    txt[10..]
+                                        .iter()
+                                        .map(|s| s.parse().expect("Parsing Numeric input failed"))
+                                        .collect(),
+                                ),
+                                profit: txt[2].parse().context("Parsing Numeric failed")?,
+                                result: txt[7].parse().context("Parsing Numeric failed")?,
+                                trades: txt[9].parse().context("Parsing Numeric failed")?,
+                            })
                         }
                     }
                     _ => (),
                 }
             }
-            Event::Text(e) => txt.push(
-                e.unescape_and_decode(&report_reader)
-                    .context("Failed to decode XML")?,
-            ),
-            Event::Eof => break,
+            Ok(Event::Text(e)) => txt.push(e.unescape_and_decode(&report_reader)?),
+            Ok(Event::Eof) => break,
             _ => (),
         }
         buf.clear();
@@ -127,12 +105,82 @@ pub fn read_results_xml(results_file: PathBuf) -> Result<Vec<ResultRow>> {
 }
 
 #[cfg(test)]
-mod test {
+mod xml_test {
     use super::*;
+    use test;
 
     #[test]
     fn read_results_xml_test() {
-        let rows = read_results_xml(PathBuf::from("tests/report_AUDCAD.xml")).unwrap();
-        assert_eq!(rows.len(), 176)
+        let indi_set = IndicatorSet {
+            confirm: Some(Indicator {
+                name: "Ash".to_owned(),
+                shift: 0u8,
+                inputs: vec![
+                    vec![14., 100., 3.],
+                    vec![1., 30., 2.],
+                    vec![1., 30., 2.],
+                    vec![1., 30., 2.],
+                    vec![1., 30., 2.],
+                ],
+            }),
+            ..Default::default()
+        };
+
+        let rows = read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
+        assert_eq!(rows.len(), 663);
+    }
+
+    #[test]
+    #[should_panic]
+    fn xml_results_not_enough_params() {
+        let indi_set = IndicatorSet {
+            confirm: Some(Indicator {
+                name: "Ash".to_owned(),
+                shift: 0u8,
+                inputs: vec![
+                    vec![14., 100., 3.],
+                    vec![1., 30., 2.],
+                    vec![1., 30., 2.],
+                    vec![1., 30., 2.],
+                    vec![1., 30., 2.],
+                    vec![1., 30., 2.],
+                ],
+            }),
+            ..Default::default()
+        };
+        // we are expacting more params in result than there are given
+
+        // let result = std::panic::catch_unwind(|| {
+        read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
+        // });
+        // assert!(result.is_err());
+
+        // entered a random indi_set
+        /* let rows = read_results_xml(&indi_set, PathBuf::from("tests/report_AUDCAD.xml")).unwrap();
+         * assert_eq!(rows.len(), 176); */
+    }
+
+    #[bench]
+    fn bench_read_results_xml(b: &mut test::Bencher) {
+        let indi_set = IndicatorSet {
+            confirm: Some(Indicator {
+                name: "Wae".to_owned(),
+                shift: 0u8,
+                inputs: vec![
+                    vec![14., 100., 3.],
+                    vec![1., 30., 2.],
+                    vec![1., 30., 2.],
+                    vec![1., 30., 2.],
+                    vec![1., 30., 2.],
+                ],
+            }),
+            ..Default::default()
+        };
+
+        b.iter(|| {
+            let rows =
+                read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
+            assert_eq!(rows.len(), 663)
+        });
     }
 }

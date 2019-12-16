@@ -27,6 +27,7 @@ pub struct SignalParams {
     pub shift: u8,
 }
 
+// TODO impl TryFrom
 impl From<&SignalParams> for Indicator {
     fn from(sig: &SignalParams) -> Self {
         Indicator {
@@ -188,7 +189,8 @@ pub fn generate_signal_includes(path: &PathBuf) -> Result<()> {
     // TSignalTestODO write out to AllSignals.mqh
     //
     let mut file = File::create(path.join("AllSignals.mqh")).context("create AllSignals.mqh")?;
-    file.write_all(out.as_bytes()).context("writing AllSignals.mqh")?;
+    file.write_all(out.as_bytes())
+        .context("writing AllSignals.mqh")?;
     Ok(())
 }
 

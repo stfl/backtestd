@@ -5,34 +5,34 @@
 #![feature(test)]
 
 extern crate test;
-
 #[macro_use]
 extern crate lazy_static;
-
 #[macro_use]
 extern crate serde_derive;
-
 #[macro_use]
 extern crate anyhow;
-
 extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
-
 #[macro_use]
 extern crate clap;
 use clap::{App, Arg, SubCommand};
-
 extern crate chrono;
+extern crate gnuplot;
+#[macro_use]
+extern crate diesel;
+extern crate dotenv;
+
+pub mod schema;
+pub mod db;
 
 mod backtest_runner;
-mod params;
-mod signal_generator;
-mod xml_reader;
-
 use backtest_runner::*;
+mod params;
 use params::*;
+mod signal_generator;
 use signal_generator::*;
+mod xml_reader;
 
 // use std::future::Future;
 

@@ -24,7 +24,7 @@ pub struct SignalParams {
     pub indi_type: IndicatorType,
     pub inputs: Vec<(InputType, Vec<f32>)>,
     pub buffers: Vec<u8>,
-    pub shift: u8,
+    pub shift: i16,
 }
 
 // TODO impl TryFrom

@@ -16,6 +16,10 @@ use anyhow::{Context, Result};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde_derive;
+use chrono::prelude::*;
+use chrono::DateTime;
+use super::schema::*;
+use diesel::data_types::Cents;
 
 #[derive(Debug, Deserialize, PartialEq)]
 struct Row {
@@ -32,13 +36,25 @@ struct Row {
     input_params: Vec<f32>,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
+// #[derive(Queryable, Insertable, Associations, AsChangeset)]
+// #[table_name="results"]
 pub struct BacktestResult {
-    indi_set: IndicatorSet,
-    profit: f32,
-    result: f32,
-    trades: u32,
+    // pub indi_set: IndicatorSet,
+    pub timestamp: DateTime<Utc>,
+    pub profit: f32,
+    pub result: f32,
+    pub trades: i32,
 }
+
+/* pub struct ResultDb {
+ *     id: i32,
+ *     timestamp: DateTime<Utc>,
+ *     result: f32,
+ *     profit: Cents,
+ *     trades: i32,
+ *     params: Option<Value>,
+ * } */
 
 // pub struct ResultMap<IndicatorSet, BacktestResult>
 
@@ -69,17 +85,18 @@ pub fn read_results_xml(
                     b"Row" => {
                         if count > 1 {
                             // ignore the header row
-                            rows.push(BacktestResult {
-                                indi_set: input_indi_set.parse_result_set(
-                                    txt[10..]
-                                        .iter()
-                                        .map(|s| s.parse().expect("Parsing Numeric input failed"))
-                                        .collect(),
-                                ),
-                                profit: txt[2].parse().context("Parsing Numeric failed")?,
-                                result: txt[7].parse().context("Parsing Numeric failed")?,
-                                trades: txt[9].parse().context("Parsing Numeric failed")?,
-                            })
+                            // FIXME
+                            /* rows.push(BacktestResult {
+                             *     indi_set: input_indi_set.parse_result_set(
+                             *         txt[10..]
+                             *             .iter()
+                             *             .map(|s| s.parse().expect("Parsing Numeric input failed"))
+                             *             .collect(),
+                             *     ),
+                             *     profit: txt[2].parse().context("Parsing Numeric failed")?,
+                             *     result: txt[7].parse().context("Parsing Numeric failed")?,
+                             *     trades: txt[9].parse().context("Parsing Numeric failed")?,
+                             * }) */
                         }
                     }
                     _ => (),

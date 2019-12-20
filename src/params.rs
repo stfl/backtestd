@@ -11,9 +11,12 @@ use std::path::{Path, PathBuf};
 use anyhow::{ensure, Context, Result};
 use chrono::prelude::*;
 use chrono::DateTime;
+use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, json};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+
+use super::schema::*;
 
 const FOREX_PAIRS: &'static [&'static str] = &[
     "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
@@ -23,11 +26,19 @@ const FOREX_PAIRS: &'static [&'static str] = &[
 ];
 
 #[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
+// #[derive(Queryable, Insertable, AsChangeset)]
+// #[table_name="indicators"]
 pub struct Indicator {
     pub name: String,
     pub inputs: Vec<Vec<f32>>,
-    pub shift: u8,
+    pub shift: i16,
 }
+
+/* pub struct Indicator {
+ *     pub name: String,
+ *     pub inputs: Vec<Vec<f32>>,
+ *     pub shift: u8,
+ * } */
 
 impl Indicator {
     // maybe implement io::Write instead?

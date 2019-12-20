@@ -26,9 +26,6 @@ serde_any = { version = "0.5", default-features = false, features = ["json", "ya
 
 anyhow = "1"
 
-# plotters = { version = "0.2", features = ["cairo"] }
-gnuplot = "^0.0.32"
-
 diesel = { version = "1.4", features = ["postgres", "chrono", "serde_json"] }
 dotenv = "0.15"
 

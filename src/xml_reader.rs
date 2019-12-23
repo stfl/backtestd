@@ -32,7 +32,7 @@ struct Row {
     input_params: Vec<f32>,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct BacktestResult {
     indi_set: IndicatorSet,
     profit: f32,

@@ -80,7 +80,8 @@ impl BacktestRunner {
         Ok(output.status)
     }
 
-    pub fn run_backtest(&self, keep_reports: bool) -> Result<bool> {
+    pub fn run_backtest(&self, keep_reports: bool) -> Box<dyn std::error::Error> {
+      // Result<Vec<BacktestResult>> {
         self.write_indi_params()?;
         fs::create_dir_all(get_reports_dir(&self.common, &self.run)?)?;
         self.write_terminal_config()?;
@@ -94,7 +95,7 @@ impl BacktestRunner {
             // TODO cannot delete if not empty
             fs::remove_dir(get_reports_dir(&self.common, &self.run)?)?;
         }
-        Ok(true)
+        Ok(results)
     }
 
     fn delete_report(&self) -> Result<()> {
@@ -105,9 +106,12 @@ impl BacktestRunner {
     }
 
     fn collect_report(&self) -> Result<Vec<BacktestResult>> {
-        let results = read_results_xml(&self.run.indi_set,
-          get_reports_path(&self.common, &self.run)?)?;
-        trace!("{:?}", results);
+        let results = read_results_xml(
+            &self.run.indi_set,
+            get_reports_path(&self.common, &self.run)?,
+        )?;
+        // TODO trace! does not work anymore when includeing actix-web
+        // trace!("{:?}", results);
         Ok(results)
     }
 

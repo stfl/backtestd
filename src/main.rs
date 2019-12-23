@@ -1,9 +1,14 @@
 // #![warn(rust_2018_idioms)]
-#![allow(unused_imports)]
 #![allow(dead_code)]
+#![allow(unused_imports)]
 #![allow(unused_variables)]
 #![feature(test)]
 
+// std includes
+use std::path::{Path, PathBuf};
+// use std::future::Future;
+
+// crates
 extern crate test;
 
 #[macro_use]
@@ -11,11 +16,15 @@ extern crate lazy_static;
 
 #[macro_use]
 extern crate serde_derive;
+use serde_derive::Serialize;
 
 #[macro_use]
 extern crate anyhow;
+// use anyhow::{Context, Result};
+use anyhow::Context;
 
-extern crate pretty_env_logger;
+// extern crate pretty_env_logger;
+extern crate env_logger;
 #[macro_use]
 extern crate log;
 
@@ -25,24 +34,30 @@ use clap::{App, Arg, SubCommand};
 
 extern crate chrono;
 
+#[macro_use]
+extern crate actix_web;
+// use actix::prelude::*;
+use actix_files as fs;
+use actix_web::{
+    error, middleware, web, App as ActixApp, HttpRequest, HttpResponse, HttpServer,
+};
+// use actix_web_actors::ws;
+
+// own mods
 mod backtest_runner;
-mod params;
-mod signal_generator;
-mod xml_reader;
-
 use backtest_runner::*;
+mod params;
 use params::*;
+mod signal_generator;
 use signal_generator::*;
+mod xml_reader;
+use xml_reader::*;
 
-// use std::future::Future;
-
-use std::path::{Path, PathBuf};
-
-// use tokio::io::AsyncWriteExt;
-
-// #[tokio::main]
-fn main() {
-    pretty_env_logger::init();
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+    // fn main() {
+    std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info");
+    env_logger::init();
 
     //     .version(crate_version!())
     //     .about("Runs backtests of given indicator sets and other things")
@@ -98,6 +113,9 @@ fn main() {
             (@arg HEADER: -h --("header-out-dir") +takes_value "signal header source output dir")
             (@arg INDI: -i --("indi-out-dir") +takes_value "indicator params output dir")
         )
+        (@subcommand daemon =>
+            (about: "start a daemon with a REST API")
+        )
     )
     .get_matches();
 
@@ -109,6 +127,26 @@ fn main() {
         config.workdir = PathBuf::from(w);
     }
     debug!("config: {:#?}", config);
+
+    // -------------
+    // Daemon App
+    // -------------
+    if let Some(matches) = matches.subcommand_matches("daemon") {
+        return HttpServer::new(|| {
+            ActixApp::new()
+                // enable logger
+                .wrap(middleware::Logger::default())
+                // websocket route
+                .service(web::resource("/run/").route(web::get().to(backtest_run)))
+            // static files
+            // .service(fs::Files::new("/", "static/").index_file("index.html"))
+        })
+        // start http server on 127.0.0.1:8080
+        .bind("127.0.0.1:8080")?
+        .start()
+        .await;
+        // returning here..
+    }
 
     // -------------
     // Generate Signals App
@@ -138,6 +176,7 @@ fn main() {
             indi,
         )
         .expect("writing signal input config failed");
+        return Ok(());
     }
 
     // -------------
@@ -152,7 +191,52 @@ fn main() {
         debug!("run: {:#?}", run);
         let runner = BacktestRunner::new(run, config.clone());
         let _ = runner
-            .run_backtest(matches.is_present("KEEP"))
-            .expect("running backtest failed");
+            .run_backtest(matches.is_present("KEEP"));
+            // .expect("running backtest failed");
+        return Ok(());
     }
+
+    Ok(())
+}
+
+// impl
+/* impl From<anyhow::Error> for actix_web::Error {
+ *     fn from(error: anyhow::Error) -> Self {
+ *         error.into()
+ *         // actix_web::Error {
+ *             // cause:
+ *         // }
+ *             // ::as_resonse_error(error.description())
+ *     }
+ * } */
+
+// impl actix_web::ResponseError for anyhow::Error {
+// }
+
+async fn backtest_run(
+    run: web::Json<RunParams>,
+    // req: HttpRequest,
+// ) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+) -> Result<HttpResponse, actix_web::Error> {
+// ) -> Result<web::Json<Vec<BacktestResult>>, anyhow::Error> {
+    // let config_file = matches.value_of("CONFIG").unwrap_or();
+    let config: CommonParams =
+        serde_any::from_file("config/config.yaml").expect("loadiing config failed");
+
+    with_dyn()?;
+    Ok(HttpResponse::Ok().finish()
+        // BacktestRunner::new(run.into_inner(), config).run_backtest(false)
+            // .map_err(|e| e.into())
+    )
+    /* Ok(HttpResponse::Ok().json(
+     *     BacktestRunner::new(run.into_inner(), config).run_backtest(false)
+     *         // .map_err(|e| e.into())
+     * )) */
+    // Ok(web::Json(
+        // BacktestRunner::new(run.into_inner(), config).run_backtest(false)?,
+    // ))
+}
+
+async fn with_dyn() -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
 }

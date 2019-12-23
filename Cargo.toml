@@ -6,8 +6,9 @@ edition = "2018"
 
 [dependencies]
 lazy_static = "1"
-pretty_env_logger = "*"
-log = "*"
+# pretty_env_logger = "0.3"
+env_logger = "0.7"
+log = "0.4"
 clap = "2"
 
 chrono = { version = "0.4", features = ["serde"] }
@@ -16,15 +17,15 @@ chrono = { version = "0.4", features = ["serde"] }
 # tokio = "=0.2.0-alpha.6"
 
 quick-xml = "0.17"
-handlebars = "2"
+handlebars = "2.0"
 
-serde = "*"
-serde_json = "*"
-serde_derive = "*"
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"
 serde_repr = "0.1"
 serde_any = { version = "0.5", default-features = false, features = ["json", "yaml"] }
 
-anyhow = "1"
+anyhow = "1.0"
 
 # heim = "0.0.8"
 # heim-common = "0.0.8"
@@ -33,3 +34,12 @@ anyhow = "1"
 
 futures = "0.3"
 futures-executor = "0.3"
+
+actix-web = "2.0.0-rc"
+actix-web-actors = "2.0"
+actix-codec = "0.2"
+actix-files = "0.2"
+actix-rt = "1.0"
+awc = "1.0"
+bytes = "0.5"
+

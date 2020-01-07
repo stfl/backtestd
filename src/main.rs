@@ -7,6 +7,7 @@
 // std includes
 use std::path::{Path, PathBuf};
 // use std::future::Future;
+use std::sync::Mutex;
 
 // crates
 extern crate test;
@@ -39,7 +40,8 @@ extern crate actix_web;
 // use actix::prelude::*;
 use actix_files as fs;
 use actix_web::{
-    error, middleware, web, App as ActixApp, HttpRequest, HttpResponse, HttpServer,
+    error::ErrorInternalServerError, middleware, web, App as ActixApp, Error as ActixError,
+    HttpRequest, HttpResponse, HttpServer,
 };
 // use actix_web_actors::ws;
 
@@ -132,12 +134,15 @@ async fn main() -> std::io::Result<()> {
     // Daemon App
     // -------------
     if let Some(matches) = matches.subcommand_matches("daemon") {
-        return HttpServer::new(|| {
+        return HttpServer::new(move || {
             ActixApp::new()
                 // enable logger
                 .wrap(middleware::Logger::default())
+                .data(web::Data::new(Mutex::new(config.clone())))
                 // websocket route
                 .service(web::resource("/run/").route(web::get().to(backtest_run)))
+            // .service(web::resource("/generate/").route(web::get().to(gen_signal)))
+            // .service(web::resource("/config/").route(web::get().to(set_config)))
             // static files
             // .service(fs::Files::new("/", "static/").index_file("index.html"))
         })
@@ -190,9 +195,8 @@ async fn main() -> std::io::Result<()> {
             .into();
         debug!("run: {:#?}", run);
         let runner = BacktestRunner::new(run, config.clone());
-        let _ = runner
-            .run_backtest(matches.is_present("KEEP"));
-            // .expect("running backtest failed");
+        let _ = runner.run_backtest(matches.is_present("KEEP"));
+        // .expect("running backtest failed");
         return Ok(());
     }
 
@@ -214,29 +218,39 @@ async fn main() -> std::io::Result<()> {
 // }
 
 async fn backtest_run(
-    run: web::Json<RunParams>,
-    // req: HttpRequest,
-// ) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-) -> Result<HttpResponse, actix_web::Error> {
-// ) -> Result<web::Json<Vec<BacktestResult>>, anyhow::Error> {
-    // let config_file = matches.value_of("CONFIG").unwrap_or();
-    let config: CommonParams =
-        serde_any::from_file("config/config.yaml").expect("loadiing config failed");
-
-    with_dyn()?;
-    Ok(HttpResponse::Ok().finish()
-        // BacktestRunner::new(run.into_inner(), config).run_backtest(false)
-            // .map_err(|e| e.into())
-    )
-    /* Ok(HttpResponse::Ok().json(
-     *     BacktestRunner::new(run.into_inner(), config).run_backtest(false)
-     *         // .map_err(|e| e.into())
-     * )) */
-    // Ok(web::Json(
-        // BacktestRunner::new(run.into_inner(), config).run_backtest(false)?,
-    // ))
+    data: web::Json<(CommonParams, RunParams)>, //web::Data<Mutex<CommonParams>>)
+    // data: (web::Json<RunParams>, web::Data<Mutex<CommonParams>>)
+) -> Result<HttpResponse, ActixError> {
+    let (config, run) = data.into_inner();
+    debug!(
+        "running backtest with common: {:#?}\nrun:{:#?}",
+        config, run
+    );
+    Ok(HttpResponse::Ok().json(
+        BacktestRunner::new(run, config)
+            .run_backtest(false)
+            .map_err(|e| ErrorInternalServerError(e))?,
+    ))
 }
 
-async fn with_dyn() -> Result<(), Box<dyn std::error::Error>> {
-    Ok(())
+async fn signal_gen(
+    data: web::Json<(CommonParams, SignalParams)>,
+) -> Result<HttpResponse, ActixError> {
+    let (config, sig) = data.into_inner();
+    debug!(
+        "generating signal with common: {:#?}\nsignal_params: {:#?}",
+        config, sig
+    );
+
+    generate_signal(&sig, &config.workdir.join("MQL5/Include/IndiSignals"))
+        .map_err(|e| ErrorInternalServerError(e))?;
+
+    // let indi_config_dir = Path::new(matches.value_of("HEADER").unwrap_or("config/indicator"));
+    generate_signal_includes(&config.workdir.join("MQL5/Include/IndiSignals"))
+        .map_err(|e| ErrorInternalServerError(e))?;
+
+    // let indi = &Indicator::from(&sig);
+    // generate_signal(sig, );
+    Ok(HttpResponse::Ok().json(Indicator::from(&sig)))
 }
+

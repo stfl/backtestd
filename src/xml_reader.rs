@@ -34,7 +34,8 @@ struct Row {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct BacktestResult {
-    indi_set: IndicatorSet,
+    // indi_set: IndicatorSet,
+    params: Vec<String>,
     profit: f32,
     result: f32,
     trades: u32,
@@ -70,12 +71,16 @@ pub fn read_results_xml(
                         if count > 1 {
                             // ignore the header row
                             rows.push(BacktestResult {
-                                indi_set: input_indi_set.parse_result_set(
-                                    txt[10..]
-                                        .iter()
-                                        .map(|s| s.parse().expect("Parsing Numeric input failed"))
-                                        .collect(),
-                                ),
+                                /* indi_set: input_indi_set.parse_result_set(
+                                 *     txt[10..]
+                                 *         .iter()
+                                 *         .map(|s| s.parse().expect("Parsing Numeric input failed"))
+                                 *         .collect(),
+                                 * ), */
+                                params: txt[10..]
+                                    .iter()
+                                    .map(|s| s.parse().expect("Parsing Numeric input failed"))
+                                    .collect(),
                                 profit: txt[2].parse().context("Parsing Numeric failed")?,
                                 result: txt[7].parse().context("Parsing Numeric failed")?,
                                 trades: txt[9].parse().context("Parsing Numeric failed")?,

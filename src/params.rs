@@ -506,6 +506,7 @@ pub enum OptimizeMode {
     AllSymbols = 3, // "All symbols selected in Market Watch"
 }
 
+
 impl Default for OptimizeMode {
     fn default() -> Self {
         OptimizeMode::Complete

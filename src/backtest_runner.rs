@@ -27,9 +27,9 @@ pub struct BacktestRunner {
 }
 
 impl BacktestRunner {
-    pub fn new(run: RunParams, common: CommonParams) -> BacktestRunner {
+    pub fn new(run: RunParams, common: &CommonParams) -> BacktestRunner {
         BacktestRunner {
-            common: common,
+            common: common.clone(),
             run: run,
         }
     }

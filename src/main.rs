@@ -58,7 +58,7 @@ use xml_reader::*;
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
     // fn main() {
-    std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info");
+    std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info,debug");
     env_logger::init();
 
     //     .version(crate_version!())
@@ -138,17 +138,19 @@ async fn main() -> std::io::Result<()> {
             ActixApp::new()
                 // enable logger
                 .wrap(middleware::Logger::default())
-                .data(web::Data::new(Mutex::new(config.clone())))
+                .data(config.clone())
+                // .data(web::Data::new(Mutex::new(config.clone())))
                 // websocket route
-                .service(web::resource("/run/").route(web::get().to(backtest_run)))
+                .service(web::resource("/run")
+                    .route(web::post().to(backtest_run)))
             // .service(web::resource("/generate/").route(web::get().to(gen_signal)))
             // .service(web::resource("/config/").route(web::get().to(set_config)))
             // static files
             // .service(fs::Files::new("/", "static/").index_file("index.html"))
         })
         // start http server on 127.0.0.1:8080
-        .bind("127.0.0.1:8080")?
-        .start()
+        .bind("0.0.0.0:12311")?
+        .run()
         .await;
         // returning here..
     }
@@ -194,7 +196,7 @@ async fn main() -> std::io::Result<()> {
             .expect("reading RunParamsFile failed")
             .into();
         debug!("run: {:#?}", run);
-        let runner = BacktestRunner::new(run, config.clone());
+        let runner = BacktestRunner::new(run, &config);
         let _ = runner.run_backtest(matches.is_present("KEEP"));
         // .expect("running backtest failed");
         return Ok(());
@@ -218,16 +220,18 @@ async fn main() -> std::io::Result<()> {
 // }
 
 async fn backtest_run(
-    data: web::Json<(CommonParams, RunParams)>, //web::Data<Mutex<CommonParams>>)
-    // data: (web::Json<RunParams>, web::Data<Mutex<CommonParams>>)
+    // data: web::Json<(CommonParams, RunParams)>, //web::Data<Mutex<CommonParams>>)
+    data: web::Json<RunParams>, config: web::Data<CommonParams>
 ) -> Result<HttpResponse, ActixError> {
-    let (config, run) = data.into_inner();
+    // let (config, run) = data.into_inner();
+    let run = data.into_inner();
+    let config = config.into_inner();
     debug!(
         "running backtest with common: {:#?}\nrun:{:#?}",
         config, run
     );
     Ok(HttpResponse::Ok().json(
-        BacktestRunner::new(run, config)
+        BacktestRunner::new(run, &config)
             .run_backtest(false)
             .map_err(|e| ErrorInternalServerError(e))?,
     ))

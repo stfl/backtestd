@@ -137,6 +137,9 @@ mod xml_test {
 
     #[test]
     #[should_panic]
+    #[ignore]
+    // the output format has changed to directly return a Vec of the given params.
+    // no casting into IndicatorSet
     fn xml_results_not_enough_params() {
         let indi_set = IndicatorSet {
             confirm: Some(Indicator {

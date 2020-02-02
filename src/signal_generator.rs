@@ -69,6 +69,7 @@ pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Resul
     }
     let mut handlebars = Handlebars::new();
 
+    fs::create_dir_all(output_dir)?;
     let mut output_file =
         File::create(output_dir.join(format!("Signal{}.mqh", signal_params.name)))
             .context("creating Signals header")?;
@@ -175,7 +176,9 @@ pub fn generate_signal_includes(path: &PathBuf) -> Result<()> {
     // TODO this only checks for trailing /
     // ensure!(path.is_dir(), format!("{:?} is not a directory", path));
 
-    fs::remove_file(path.join("AllSignals.mqh")).context("removing AllSignals.mqh")?;
+    if path.join("AllSignals.mqh").is_file() {
+        fs::remove_file(path.join("AllSignals.mqh")).context("removing AllSignals.mqh")?;
+    }
     let headers: Vec<OsString> = fs::read_dir(path)
         .context("reading signals header dir")?
         .filter_map(|entry| {

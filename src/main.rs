@@ -21,11 +21,11 @@ use serde_derive::Serialize;
 
 #[macro_use]
 extern crate anyhow;
-// use anyhow::{Context, Result};
-use anyhow::Context;
+use anyhow::{Context, Result};
+// use anyhow::Context;
 
-// extern crate pretty_env_logger;
-extern crate env_logger;
+extern crate pretty_env_logger;
+// extern crate env_logger;
 #[macro_use]
 extern crate log;
 
@@ -56,10 +56,12 @@ mod xml_reader;
 use xml_reader::*;
 
 #[actix_rt::main]
+// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+// async fn main() -> Result<(), anyhow::Error> {
 async fn main() -> std::io::Result<()> {
-    // fn main() {
+    // TODO extend_var or sth
     std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info,debug");
-    env_logger::init();
+    pretty_env_logger::init();
 
     //     .version(crate_version!())
     //     .about("Runs backtests of given indicator sets and other things")
@@ -169,7 +171,8 @@ async fn main() -> std::io::Result<()> {
             &signal_params,
             &config.workdir.join("MQL5/Include/IndiSignals"),
         )
-        .expect("generating signal failed");
+        .expect("generate signal failed");
+        // ?;
 
         // let indi_config_dir = Path::new(matches.value_of("HEADER").unwrap_or("config/indicator"));
         generate_signal_includes(&config.workdir.join("MQL5/Include/IndiSignals"))
@@ -178,6 +181,7 @@ async fn main() -> std::io::Result<()> {
         let indi_config_dir = Path::new(matches.value_of("INDI").unwrap_or("config/indicator"));
         let indi = &Indicator::from(&signal_params);
         debug!("geneaterd indi input {:#?}", indi);
+        std::fs::create_dir_all(indi_config_dir)?;
         serde_any::to_file(
             indi_config_dir.join(format!("{}.yaml", signal_params.name)),
             indi,

@@ -53,29 +53,34 @@ impl BacktestRunner {
     }
 
     fn run_terminal(&self) -> Result<ExitStatus> {
-        let mut cmd = Command::new(
-            self.common
-                .terminal_exe
-                .as_os_str()
-                .to_str()
-                .context("conversion error for terminal.exe path")?,
-        );
-        cmd.arg(format!(
-            "/config:{}",
-            self.common
-                .workdir
-                .join("terminal.ini")
-                .as_os_str()
-                .to_str()
-                .context("conversion error in terminal.ini path")?
-        ));
+        let mut cmd: Command;
+        if self.common.wine {
+            cmd = Command::new("wine");
+            cmd.arg(
+                self.common
+                    .terminal_exe
+                    .as_os_str()
+                    .to_str()
+                    .context("conversion error for terminal.exe path")?,
+            );
+        } else {
+            cmd = Command::new(
+                self.common
+                    .terminal_exe
+                    .as_os_str()
+                    .to_str()
+                    .context("conversion error for terminal.exe path")?,
+            );
+        }
+        cmd.arg(format!("/config:{}", "terminal.ini"));
+        cmd.current_dir(&self.common.workdir);
         debug!("running terminal: {:?}", cmd);
 
         let output = cmd.output().context("Terminal Command execution failed")?;
         debug!(
             "Terminal out: {}{}",
             String::from_utf8_lossy(&output.stdout).trim(),
-            String::from_utf8_lossy(&output.stdout).trim()
+            String::from_utf8_lossy(&output.stderr).trim()
         );
         Ok(output.status)
     }

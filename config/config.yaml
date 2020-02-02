@@ -1,8 +1,15 @@
 ---
 params_file: expert_params.set
-terminal_exe: "C:\\Program Files\\MetaTrader 5\\terminal64.exe"
-workdir: "C:\\Users\\stele\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075"
+# use wine on Linux
+wine: true
+# path to terminal64.exe to execute :: use C:/ for wine as well
+terminal_exe: "C:/Program Files/MetaTrader 5/terminal64.exe"
+# full path workdir to cwd into
+workdir: "/home/stefan/.wine/drive_c/Program Files/MetaTrader 5"
+# workdir: "C:/Users/stele/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075"
+# workdir: "C:\\Users\\stele\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075"
 reports: reports
+# expert with Windows-style "\"
 expert: "BacktestExpert\\nnfx-ea\\nnfx-ea.ex5"
 period: D1
 login: "7090"

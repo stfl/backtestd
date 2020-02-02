@@ -340,6 +340,7 @@ impl From<IndicatorSetFile> for IndicatorSet {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct CommonParams {
     pub params_file: String,
+    pub wine: bool,
     pub terminal_exe: PathBuf,
     pub workdir: PathBuf,
     pub reports: PathBuf,
@@ -434,12 +435,16 @@ ExecutionMode={exec_mode}",
 }
 
 pub fn to_terminal_config(common: &CommonParams, run: &RunParams) -> Result<String> {
-    let reports_path_relative = common.reports.join(&run.name).join("reports.xml");
-    // reports_path_relative.set_extension("xml");
-    let reports_path_relative = reports_path_relative.as_os_str();
-    /* MQL5Login=stfl
-     * MQL5Password=A88CCCC34E5793E0DDF44A91650F590F896D251CFD0693E07A91B6FD2FD95F151D012C23434C3683677EE128B15BE298FDE1C8BF3A4365B2
-     * MQL5UseStorage=1 */
+    ensure!(! common.reports.is_absolute(), "reports path must be relative");
+    // generate the reports path for the terminal.ini with windows-style "\"
+    let reports_path_relative = common
+        .reports
+        .join(&run.name)
+        .join("reports.xml")
+        .iter()
+        .filter_map(|s| s.to_str())
+        .collect::<Vec<&str>>()
+        .join("\\");
     Ok(format!(
         "[Common]
 Login={login}
@@ -458,10 +463,10 @@ Report={report}",
             .symbols
             .iter()
             .max_by(|x, y| x.cmp(y))
-            // XXX take the alphanumerical. This causes the bar times to be correct
+            // TODO take the alphanumerical. This causes the bar times to be correct
             // this is a very vage assumtion and needs to be double and tripple checked in the EA
             .context("sorting symbols failed")?,
-        report = reports_path_relative.to_string_lossy()
+        report = reports_path_relative
     ))
 }
 
@@ -505,7 +510,6 @@ pub enum OptimizeMode {
     Genetic = 2,    // "Fast genetic based algorithm"
     AllSymbols = 3, // "All symbols selected in Market Watch"
 }
-
 
 impl Default for OptimizeMode {
     fn default() -> Self {
@@ -617,8 +621,9 @@ Baseline_Shift=7
     #[test]
     #[cfg(unix)]
     fn reports_dir_test() {
-        let common = CommonParams {
+        let mut common = CommonParams {
             params_file: "expert_params.set".to_string(),
+            wine: false,
             terminal_exe: PathBuf::from(r"C:\terminal64.exe"),
             workdir: PathBuf::from(r"C:/workdir"),
             reports: PathBuf::from("reports"),
@@ -679,6 +684,28 @@ Baseline_Shift=7
             (*get_reports_path(&common, &run).unwrap()).to_str(),
             Some(r"C:/workdir/reports/test/reports.xml")
         );
+
+        common.workdir = PathBuf::from(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5");
+        assert_eq!(
+            (*get_reports_path(&common, &run).unwrap()).to_str(),
+            Some(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/test/reports.xml")
+        );
+
+        common.reports = PathBuf::from(r"reports/inner");
+        assert_eq!(
+            (*get_reports_path(&common, &run).unwrap()).to_str(),
+            Some(
+                r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/inner/test/reports.xml"
+            )
+        );
+
+        // FIXME paths are not platform agnostic
+        // reports need configured correctly for the platform!
+        // common.reports = PathBuf::from(r"reports\inner");
+        // assert_eq!(
+        //     (*get_reports_path(&common, &run).unwrap()).to_str(),
+        //     Some(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/inner/test/reports.xml")
+        // );
     }
 
     /* #[test]
@@ -694,10 +721,10 @@ Baseline_Shift=7
      * } */
 
     #[test]
-    #[cfg(unix)]
     fn to_terminal_config_test() {
         let common = CommonParams {
             params_file: "expert_params.set".to_string(),
+            wine: false,
             terminal_exe: PathBuf::from(r"C:\terminal64.exe"),
             workdir: PathBuf::from(r"C:\workdir"),
             reports: PathBuf::from("reports"),
@@ -792,7 +819,7 @@ Model=0
 Optimization=1
 OptimizationCriterion=6
 Symbol=USDJPY
-Report=reports/test/reports.xml"
+Report=reports\test\reports.xml"
         );
     }
 
@@ -801,6 +828,7 @@ Report=reports/test/reports.xml"
         let workdir = Path::new(r"C:\workdir");
         let term_params = CommonParams {
             params_file: "expert_params.set".to_string(),
+            wine: false,
             terminal_exe: PathBuf::from(r"C:\terminal64.exe"),
             workdir: workdir.to_path_buf(),
             reports: PathBuf::from("reports"),
@@ -818,6 +846,7 @@ Report=reports/test/reports.xml"
         };
 
         let j = r#"{"params_file":"expert_params.set",
+                       "wine":false,
                        "terminal_exe":"C:\\terminal64.exe",
                        "workdir":"C:\\workdir",
                        "reports":"reports",

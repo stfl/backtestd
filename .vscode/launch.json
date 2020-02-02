@@ -5,11 +5,49 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
+            "name": "Run",
             "type": "lldb",
             "request": "launch",
             "program": "./target/debug/backtest-run",
+            "args": ["run", "config/run.yaml"],
             "cwd": "${workspaceRoot}",
+            "env": {
+                "RUST_LOG": "error",
+                "RUST_LOG_STYLE": "always",
+                "RUST_BACKTRACE": "1",
+            },
+        },
+        {
+            "name": "Gen",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": ["build", "--bin=backtest-run", "--package=backtest-run"],
+                "filter": {
+                    "name": "backtest-run",
+                    "kind": "bin"
+                },
+            },
+            "args": ["-w", "/tmp",
+                    "gen", "config/generate/confirm/chaikin.yaml",
+                    "-i", "tmp/config/confirm"
+                ],
+            "cwd": "${workspaceRoot}",
+            "sourceLanguages": ["rust"],
+        },
+        {
+            "name": "Tests",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": ["test", "--no-run"], // Cargo command line to build the debug target
+                // "args": ["build", "--bin=foo"] is another possibility
+                "filter": {
+                    // Filter applied to compilation artifacts (optional)
+                    "name": "backtest-run",
+                    "kind": "bin"
+                }
+            }
         }
     ]
 }

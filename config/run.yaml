@@ -1,7 +1,7 @@
 ---
 name: bt_run
 indi_set:
-  confirm: config/indicator/confirm/Ash.yaml
+  confirm: config/indicator/baseline/Plombiers.yaml
   confirm2: ~
   confirm3: ~
   exit: ~
@@ -22,7 +22,7 @@ optimize: 2
     # Complete = 1,   // "Slow complete algorithm"
     # Genetic = 2,    // "Fast genetic based algorithm"
     # AllSymbols = 3, // "All symbols selected in Market Watch"
-optimize_crit: 6
+optimize_crit: 0
     # Balance = 0,         // the maximum balance value,
     # BalanceProf = 1,     // the maximum value of product of the balance and profitability,
     # BalancePayoff = 2,   // the product of the balance and expected payoff,

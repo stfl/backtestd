@@ -125,7 +125,7 @@ async fn main() -> std::io::Result<()> {
 
     let config_file = matches.value_of("CONFIG").unwrap_or("config/config.yaml");
     let mut config: CommonParams =
-        serde_any::from_file(config_file).expect("reading config file failed");
+        serde_any::from_file(config_file).expect(&format!("reading config file failed: {}", config_file));
 
     if let Some(w) = matches.value_of("WORKDIR") {
         config.workdir = PathBuf::from(w);

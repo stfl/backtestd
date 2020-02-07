@@ -1,0 +1,38 @@
+---
+name: STC
+name_indi: SchaffTrendCycle
+indi_type: SingleLineLevelCross
+shift: 0
+inputs:
+# //---- Input Parameters
+# input int MAShort = 23;
+# input int MALong = 50;
+# input int Cycle = 10;
+  - - Int
+    - - 23.0
+      - 13.0
+      - 33.0
+      - 2.0
+  - - Int
+    - - 50.0
+      - 35.0
+      - 65.0
+      - 3.0
+  - - Int
+    - - 10.0
+      - 4.0
+      - 15.0
+      - 2.0
+
+# //---- Buffers
+# double ST2[];
+# double ST[];
+# double MACD[];
+buffers:
+  - 0   # signal line
+levels:
+  - 25  # up enter
+  - 25  # up exit
+  - 75  # down enter
+  - 75  # down exit
+

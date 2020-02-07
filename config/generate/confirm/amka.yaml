@@ -1,0 +1,46 @@
+---
+name: Amka
+name_indi: amka-indicator
+indi_type: Semaphore
+inputs:
+# input int ama_period=9; // Period of AMA
+  - - Int
+    - - 9.0
+      - 5.0
+      - 15.0
+      - 1.0
+# input int fast_ma_period=2; // Period of fast MA
+  - - Int
+    - - 2.0
+      - 2.0
+      - 8.0
+      - 1.0
+# input int slow_ma_period=30; // Period of slow MA
+  - - Int
+    - - 30.0
+      - 20.0
+      - 40.0
+      - 2.0
+# input double G=2.0; // The power the smoothing constant is raised to
+  - - Double
+    - - 2.0
+      - 1.0
+      - 3.0
+      - 0.2
+# input int AMAShift = 0; // Horizontal shift of the indicator in bars
+  - - Int
+    - - 0.0
+# input double dK = 1.0;  //Coefficient for the filter
+  - - Double
+    - - 1.0
+      - 0.0
+      - 3.0
+      - 0.2
+
+buffers:
+# up buffer
+  - 2
+# down buffer
+  - 1
+shift: 0
+

@@ -18,6 +18,21 @@
             },
         },
         {
+            "name": "Run2",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": ["build", "--bin=backtest-run", "--package=backtest-run"],
+                "filter": {
+                    "name": "backtest-run",
+                    "kind": "bin"
+                },
+            },
+            "args": ["run", "config/run.yaml"],
+            "cwd": "${workspaceRoot}",
+            "sourceLanguages": ["rust"],
+        },
+        {
             "name": "Gen",
             "type": "lldb",
             "request": "launch",
@@ -29,8 +44,8 @@
                 },
             },
             "args": ["-w", "/tmp",
-                    "gen", "config/generate/confirm/chaikin.yaml",
-                    "-i", "tmp/config/confirm"
+                    "gen", "config/generate/exit/stc.yaml",
+                    "-i", "/tmp/config/indicator/exit"
                 ],
             "cwd": "${workspaceRoot}",
             "sourceLanguages": ["rust"],

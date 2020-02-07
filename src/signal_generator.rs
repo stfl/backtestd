@@ -24,6 +24,7 @@ pub struct SignalParams {
     pub indi_type: IndicatorType,
     pub inputs: Vec<(InputType, Vec<f32>)>,
     pub buffers: Vec<u8>,
+    pub levels: Option<Vec<f32>>, // up_enter, up_exit, down_enter, down_exit
     pub shift: u8,
 }
 
@@ -57,15 +58,29 @@ pub enum InputType {
 pub enum IndicatorType {
     ZeroLineCross,
     TwoLinesCross,
+    SingleLineLevelCross,
+    LevelCross,
     OnChart,
+    OnChartReverse,
     Semaphore,
 }
 
 pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Result<()> {
-    if signal_params.indi_type == IndicatorType::TwoLinesCross {
-        if signal_params.buffers.len() < 2 || signal_params.buffers[0] == signal_params.buffers[1] {
-            ensure!(false, "TwoLinesCross needs two different buffer indeces");
+    match signal_params.indi_type {
+        IndicatorType::TwoLinesCross => {
+            if signal_params.buffers.len() < 2
+                || signal_params.buffers[0] == signal_params.buffers[1]
+            {
+                ensure!(false, "TwoLinesCross needs two different buffer indeces");
+            }
         }
+        IndicatorType::SingleLineLevelCross | IndicatorType::ZeroLineCross => {
+            ensure!(
+                signal_params.buffers.len() == 1,
+                "Only one buffer allowed for"
+            );
+        }
+        _ => (),
     }
     let mut handlebars = Handlebars::new();
 
@@ -94,6 +109,12 @@ pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Resul
         ),
     );
     data.insert("buffers".to_string(), to_json(&signal_params.buffers));
+    if signal_params.levels.is_some() {
+        let levels = signal_params.levels.as_ref().unwrap();
+        ensure!(levels.len() == 4, "wrong length of level inputs");
+        data.insert("levels".to_string(), to_json(levels));
+        debug!("{:?}", data);
+    }
 
     handlebars.register_helper("inc", Box::new(inc_helper));
     handlebars.register_helper("length", Box::new(length_helper));
@@ -115,6 +136,12 @@ CSignal{{name}}::CSignal{{name}}(void) {
   m_buf_idx = {{buffers.0}};
   {{#if buffers.1 ~}}
   m_down_idx = {{buffers.1}};
+  {{/if ~}}
+  {{#if levels ~}}
+  m_level_up_enter   = {{levels.0}};
+  m_level_up_exit    = {{levels.1}};
+  m_level_down_enter = {{levels.2}};
+  m_level_down_exit  = {{levels.3}};
   {{/if ~}}
 }
 
@@ -241,12 +268,20 @@ mod tests {
                 (InputType::Int, vec![0f32]),
             ],
             buffers: vec![0u8],
+            levels: None,
             shift: 0,
         };
-        assert!(generate_signal(&sig_params, Path::new("/tmp")).is_err());
-        sig_params.buffers = vec![0u8, 0u8];
+        assert!(generate_signal(&sig_params, Path::new("/tmp")).is_err()); // only one buffer given
+        sig_params.buffers = vec![0u8, 0u8]; // same buffer for TwoLineCross
         assert!(generate_signal(&sig_params, Path::new("/tmp")).is_err());
         sig_params.buffers[1] = 1u8;
+        generate_signal(&sig_params, Path::new("/tmp")).unwrap();
+
+        sig_params.indi_type = IndicatorType::SingleLineLevelCross;
+        sig_params.buffers = vec![0u8];
+        sig_params.levels = Some(vec![0f32]); // not enough levels
+        assert!(generate_signal(&sig_params, Path::new("/tmp")).is_err());
+        sig_params.levels = Some(vec![75f32, 60f32, 25f32, 40f32]);
         generate_signal(&sig_params, Path::new("/tmp")).unwrap();
         fs::remove_file("/tmp/SignalTest.mqh").unwrap();
     }
@@ -296,6 +331,7 @@ PRODUCE_supertrendsignal \
                 (InputType::Double, vec![10f32, 6.1, 20f32, 0.5]),
             ],
             buffers: vec![0u8],
+            levels: None,
             shift: 0,
         };
         let indi = Indicator::from(&sig_params);

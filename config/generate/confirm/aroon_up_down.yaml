@@ -1,0 +1,16 @@
+---
+name: Aroon
+name_indi: Aroon_Up_Down
+indi_type: TwoLinesCross
+inputs:
+# input int AroonPeriod = 14;
+  - - Int
+    - - 14.0
+      - 4.0
+      - 30.0
+      - 2.0
+buffers:
+  - 0  # up buffer
+  - 1  # down buffer
+shift: 0
+

@@ -13,6 +13,8 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
+use chrono::offset::LocalResult;
+use chrono::prelude::*;
 
 // use heim_common::prelude::futures::stream::*;
 // use futures::prelude::*;
@@ -89,17 +91,41 @@ impl BacktestRunner {
         self.write_indi_params()?;
         fs::create_dir_all(get_reports_dir(&self.common, &self.run)?)?;
         self.write_terminal_config()?;
+        self.delete_terminal_log()?;
         self.run_terminal()?;
-        // TODO for parallel exec, randomly generte the output path
         let results = self.collect_report()?;
 
         if !keep_reports {
-            self.delete_report()?;
+            // self.delete_report()?;
             // self.push_results_to_database().context(DbError)?;
             // TODO cannot delete if not empty
-            fs::remove_dir(get_reports_dir(&self.common, &self.run)?)?;
+            // fs::remove_dir(get_reports_dir(&self.common, &self.run)?)?;
         }
+        let run_log = self.save_terminal_log()?;
+        debug!("{:?}", run_log);
         Ok(results)
+    }
+
+    fn delete_terminal_log(&self) -> Result<()> {
+        let log_path = self.get_terminal_log_path();
+        if let Err(e) = fs::remove_file(&log_path) {
+            debug!("removing terminal log failed {:?} {}", log_path, e);
+        }
+        Ok(())
+    }
+
+    fn save_terminal_log(&self) -> Result<PathBuf> {
+        let run_log = get_reports_path(&self.common, &self.run)?.with_extension("log");
+        fs::rename(self.get_terminal_log_path(), &run_log)?;
+        Ok(run_log)
+    }
+
+    fn get_terminal_log_path(&self) -> PathBuf {
+        self.common
+            .workdir
+            .join("Tester/logs")
+            .join(Local::today().format("%Y%m%d").to_string())
+            .with_extension("log")
     }
 
     fn delete_report(&self) -> Result<()> {

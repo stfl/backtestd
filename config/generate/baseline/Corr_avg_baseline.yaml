@@ -1,0 +1,79 @@
+---
+name: Corr_avg_baseline
+name_indi: Corr_average
+indi_type: OnChart
+inputs:
+
+# input ENUM_TIMEFRAMES TimeFrame        = PERIOD_CURRENT; // Time frame
+  - - Int
+    - - 0.0  # current
+      # - 1.0  # M1
+      - 5.0  # M5
+      - 19.0 # D1
+      # - 21.0 # MN1
+      - 2.0    # 5m 10m 15m 30m 2h 4h 8h 1D
+# input enMaTypes       AvgMethod        = ma_ema;         // Average method
+  - - Int
+    - - 1.0
+      - 0.0
+      - 3.0
+      - 1.0
+# input int             AvgPeriod        = 14;             // Average period
+  - - Int
+    - - 14.0
+      - 6.0
+      - 24.0
+      - 2.0
+# input enPrices        AvgPrice         = pr_close;       // Price
+  - - Int
+    - - 0.0
+      - 0.0
+      - 21.0
+      - 1.0
+# input int             CorrectionPeriod =  0;             // "Correction" period (<0 no correction,0 to 1 same as average)
+  - - Double
+    - - 0.0
+      - 0.0
+      - 1.0
+      - 0.1
+# input chgColor        ColorOn          = chg_onOrig;     // Color change on :
+  - - Int
+    - - 3.0
+# input int             FlPeriod         = 25;             // Period for finding floating levels
+  - - Int
+    - - 25.0
+      - 15.0
+      - 35.0
+      - 2.0
+# input double          FlUp             = 90;             // Upper level %
+  - - Double
+    - - 90.0
+      - 75.0
+      - 95.0
+      - 5.0
+# input double          FlDown           = 10;             // Lower level %
+  - - Double
+    - - 10.0
+      - 5.0
+      - 25.0
+      - 5.0
+# input bool            AlertsOn         = false;          // Turn alerts on?
+# input bool            AlertsOnCurrent  = true;           // Alert on current bar?
+# input bool            AlertsMessage    = true;           // Display messageas on alerts?
+# input bool            AlertsSound      = false;          // Play sound on alerts?
+# input bool            AlertsEmail      = false;          // Send email on alerts?
+# input bool            AlertsNotify     = false;          // Send push notification on alerts?
+# input bool            Interpolate      = true;           // Interpolate when in multi time frame mode?
+
+buffers:
+# SetIndexBuffer(0,fup  ,INDICATOR_DATA);
+   # SetIndexBuffer(1,fdn  ,INDICATOR_DATA);
+   # SetIndexBuffer(2,mid  ,INDICATOR_DATA);
+   # SetIndexBuffer(3,orig ,INDICATOR_DATA);
+   # SetIndexBuffer(4,origc,INDICATOR_COLOR_INDEX);
+   # SetIndexBuffer(5,val  ,INDICATOR_DATA);
+   # SetIndexBuffer(6,valc ,INDICATOR_COLOR_INDEX);
+   # SetIndexBuffer(7,count,INDICATOR_CALCULATIONS);
+  - 5
+shift: 0
+

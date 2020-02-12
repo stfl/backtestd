@@ -124,13 +124,13 @@ async fn main() -> std::io::Result<()> {
     .get_matches();
 
     let config_file = matches.value_of("CONFIG").unwrap_or("config/config.yaml");
-    let mut config: CommonParams =
-        serde_any::from_file(config_file).expect(&format!("reading config file failed: {}", config_file));
+    let mut config: CommonParams = serde_any::from_file(config_file)
+        .expect(&format!("reading config file failed: {}", config_file));
 
     if let Some(w) = matches.value_of("WORKDIR") {
         config.workdir = PathBuf::from(w);
     }
-    debug!("config: {:#?}", config);
+    info!("config: {:?}", config);
 
     // -------------
     // Daemon App
@@ -143,8 +143,7 @@ async fn main() -> std::io::Result<()> {
                 .data(config.clone())
                 // .data(web::Data::new(Mutex::new(config.clone())))
                 // websocket route
-                .service(web::resource("/run")
-                    .route(web::post().to(backtest_run)))
+                .service(web::resource("/run").route(web::post().to(backtest_run)))
             // .service(web::resource("/generate/").route(web::get().to(gen_signal)))
             // .service(web::resource("/config/").route(web::get().to(set_config)))
             // static files
@@ -165,7 +164,7 @@ async fn main() -> std::io::Result<()> {
         info!("Generate Signal from: {}", input_file);
         let signal_params: SignalParams =
             serde_any::from_file(input_file).expect("reading signal params for generation failed");
-        debug!("SignalParams {:#?}", signal_params);
+        debug!("SignalParams {:?}", signal_params);
 
         generate_signal(
             &signal_params,
@@ -180,7 +179,7 @@ async fn main() -> std::io::Result<()> {
 
         let indi_config_dir = Path::new(matches.value_of("INDI").unwrap_or("config/indicator"));
         let indi = &Indicator::from(&signal_params);
-        debug!("geneaterd indi input {:#?}", indi);
+        debug!("geneaterd indi input {:?}", indi);
         std::fs::create_dir_all(indi_config_dir)?;
         serde_any::to_file(
             indi_config_dir.join(format!("{}.yaml", signal_params.name)),
@@ -199,7 +198,7 @@ async fn main() -> std::io::Result<()> {
         let run: RunParams = serde_any::from_file::<RunParamsFile, _>(input_file)
             .expect("reading RunParamsFile failed")
             .into();
-        debug!("run: {:#?}", run);
+        debug!("run: {:?}", run);
         let runner = BacktestRunner::new(run, &config);
         let _ = runner.run_backtest(matches.is_present("KEEP"));
         // .expect("running backtest failed");
@@ -225,15 +224,13 @@ async fn main() -> std::io::Result<()> {
 
 async fn backtest_run(
     // data: web::Json<(CommonParams, RunParams)>, //web::Data<Mutex<CommonParams>>)
-    data: web::Json<RunParams>, config: web::Data<CommonParams>
+    data: web::Json<RunParams>,
+    config: web::Data<CommonParams>,
 ) -> Result<HttpResponse, ActixError> {
     // let (config, run) = data.into_inner();
     let run = data.into_inner();
     let config = config.into_inner();
-    debug!(
-        "running backtest with common: {:#?}\nrun:{:#?}",
-        config, run
-    );
+    info!("running backtest with common: {:?}\nrun:{:?}", config, run);
     Ok(HttpResponse::Ok().json(
         BacktestRunner::new(run, &config)
             .run_backtest(false)
@@ -261,4 +258,3 @@ async fn signal_gen(
     // generate_signal(sig, );
     Ok(HttpResponse::Ok().json(Indicator::from(&sig)))
 }
-

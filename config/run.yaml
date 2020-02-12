@@ -1,7 +1,7 @@
 ---
 name: bt_run
 indi_set:
-  confirm: config/indicator/baseline/Plombiers.yaml
+  confirm: config/indicator/baseline/ALF2_baseline.yaml
   confirm2: ~
   confirm3: ~
   exit: ~
@@ -30,7 +30,7 @@ optimize_crit: 0
     # BalanceRecovery = 4, // the product of the balance and the recovery factor,
     # BalanceSharpe = 5,   // the product of the balance and the Sharpe Ratio,
     # Custom = 6, // a custom optimization criterion received from the OnTester() function in the Expert Advisor).
-visual: false
+visual: true
 symbols:
   - EURUSD
   - AUDCAD

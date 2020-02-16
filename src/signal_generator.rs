@@ -25,6 +25,7 @@ pub struct SignalParams {
     pub inputs: Vec<(InputType, Vec<f32>)>,
     pub buffers: Vec<u8>,
     pub levels: Option<Vec<f32>>, // up_enter, up_exit, down_enter, down_exit
+    pub colors: Option<Vec<u8>>,  // COLOR_INDEX: neutr, up, down
     pub shift: u8,
 }
 
@@ -63,6 +64,7 @@ pub enum IndicatorType {
     OnChart,
     OnChartReverse,
     Semaphore,
+    SingleLineColorChange,
 }
 
 pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Result<()> {
@@ -113,7 +115,14 @@ pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Resul
         let levels = signal_params.levels.as_ref().unwrap();
         ensure!(levels.len() == 4, "wrong length of level inputs");
         data.insert("levels".to_string(), to_json(levels));
-        debug!("{:?}", data);
+        // debug!("{:?}", data);
+    }
+
+    if signal_params.colors.is_some() {
+        let colors = signal_params.colors.as_ref().unwrap();
+        ensure!(colors.len() == 3, "wrong length of level inputs");
+        data.insert("colors".to_string(), to_json(colors));
+        // debug!("{:?}", data);
     }
 
     handlebars.register_helper("inc", Box::new(inc_helper));
@@ -142,6 +151,11 @@ CSignal{{name}}::CSignal{{name}}(void) {
   m_level_up_exit    = {{levels.1}};
   m_level_down_enter = {{levels.2}};
   m_level_down_exit  = {{levels.3}};
+  {{/if ~}}
+  {{#if colors ~}}
+  m_color_neutr = {{colors.0}};
+  m_color_up    = {{colors.1}};
+  m_color_down  = {{colors.2}};
   {{/if ~}}
 }
 

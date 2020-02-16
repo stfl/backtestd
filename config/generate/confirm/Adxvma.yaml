@@ -1,0 +1,23 @@
+---
+name: Adxvma
+name_indi: adxvma_1_1
+indi_type: SingleLineSlope
+inputs:
+    # input int      AdxVmaPeriod = 14;       // Calculation period
+  - - Int
+    - - 14.0
+      - 4.0
+      - 20.0
+      - 2.0
+# input enPrices        Price           = pr_median;      // Price
+  - - Int
+    - - 0.0
+      - 0.0
+      - 21.0
+      - 1.0
+buffers:
+   # SetIndexBuffer(0,MaBuffer,INDICATOR_DATA);
+   # SetIndexBuffer(1,ColorBuffer,INDICATOR_COLOR_INDEX);
+  - 0
+shift: 0
+

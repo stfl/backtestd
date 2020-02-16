@@ -1,0 +1,19 @@
+---
+name: GMA
+name_indi: YGMA
+# use YMA and GMA from the same indi
+indi_type: OnChart
+inputs:
+# YMA
+  - - Int
+    - - -1.0
+# GMA
+  - - Int
+    - - 21.0
+      - 9.0
+      - 35.0
+      - 2.0
+buffers:
+  - 1
+shift: 0
+

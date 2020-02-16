@@ -1,0 +1,71 @@
+---
+name: Corr_momentum
+name_indi: Corr_momentum
+indi_type: SingleLineColorChange
+inputs:
+# input int        MomPeriod        = 32;          // Momentum period
+  - - Int
+    - - 32.0
+      - 20.0
+      - 45.0
+      - 2.0
+# input int        CorrectionPeriod =  0;          // Correction period (<0 no correction =0 same as momentum period)
+  - - Int
+    - - 0.0
+      - -5.0
+      - 40.0
+      - 5.0
+# input enPrices   Price            = pr_close;    // Price
+  - - Int
+    - - 0.0
+      - 0.0
+      - 21.0
+      - 1.0
+# input enColorOn  ColorOn          = chg_onLevel; // Color change on :
+  - - Int
+    - - 0.0
+      - 0.0
+      - 3.0
+      - 1.0
+# input int        LevelsPeriod     = 25;          // Levels period
+  - - Int
+    - - 25.0
+      - 15.0
+      - 40.0
+      - 2.0
+# input double     LevelsUp         = 90;          // Upper level %
+  - - Int
+    - - 90.0
+      - 70.0
+      - 95.0
+      - 5.0
+# input double     LevelsDown       = 10;          // Lower level %
+  - - Int
+    - - 10.0
+      - 5.0
+      - 30.0
+      - 5.0
+# input bool       AlertsOn         = false;       // Turn alerts on?
+# input bool       AlertsOnCurrent  = true;        // Alert on current bar?
+# input bool       AlertsMessage    = true;        // Display messageas on alerts?
+# input bool       AlertsSound      = false;       // Play sound on alerts?
+# input bool       AlertsEmail      = false;       // Send email on alerts?
+# input bool       AlertsNotify     = false;       // Send push notification on alerts?
+buffers:
+   # SetIndexBuffer(0,fill1  ,INDICATOR_DATA);
+   # SetIndexBuffer(1,fill2  ,INDICATOR_DATA);
+   # SetIndexBuffer(2,levelUp,INDICATOR_DATA);
+   # SetIndexBuffer(3,levelMi,INDICATOR_DATA);
+   # SetIndexBuffer(4,levelDn,INDICATOR_DATA);
+   # SetIndexBuffer(5,val    ,INDICATOR_DATA);
+   # SetIndexBuffer(6,valc   ,INDICATOR_COLOR_INDEX);
+   # SetIndexBuffer(7,cor    ,INDICATOR_DATA);
+   # SetIndexBuffer(8,corc   ,INDICATOR_COLOR_INDEX);
+   # SetIndexBuffer(9,prices ,INDICATOR_CALCULATIONS);
+  - 8
+colors:
+  - 0
+  - 1
+  - 2
+shift: 0
+

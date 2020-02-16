@@ -1,0 +1,54 @@
+---
+name: iTrend_2lx
+name_indi: iTrend
+indi_type: TwoLinesCross
+inputs:
+
+# input ENUM_TIMEFRAMES TimeFrame         = PERIOD_CURRENT; // Time frame
+  - - Int
+    - - 0.0  # current
+# input int             ItPeriod          = 20;             // iTrend period
+  - - Double
+    - - 20.0
+      - 10.0
+      - 35.0
+      - 2.0
+# input enMaTypes       ItMaMethod        = ma_ema;         // iTrend average method
+  - - Double
+    - - 1.0
+      - 0.0
+      - 3.0
+      - 1.0
+# input enPrices        ItPrice           = pr_close;       // Price
+  - - Int
+    - - 0.0
+      - 0.0
+      - 21.0
+      - 1.0
+# input int             LevelBars         = 300;            // Look back period for levels
+  - - Int
+    - - 0.0
+# input double          LevelFactor       = 0.283;          // Levels factor
+  - - Double
+    - - 0.0
+# input bool            alertsOn          = false;          // Turn alerts on?
+# input bool            alertsOnCurrent   = true;           // Alert on current bar?
+# input bool            alertsMessage     = true;           // Display messageas on alerts?
+# input bool            alertsSound       = false;          // Play sound on alerts?
+# input bool            alertsEmail       = false;          // Send email on alerts?
+# input bool            alertsNotify      = false;          // Send push notification on alerts?
+# input bool            Interpolate       = true;           // Interpolate mtf data ?
+buffers:
+   # SetIndexBuffer(0,fillu  ,INDICATOR_DATA);
+   # SetIndexBuffer(1,filluz ,INDICATOR_DATA);
+   # SetIndexBuffer(2,filld  ,INDICATOR_DATA);
+   # SetIndexBuffer(3,filldz ,INDICATOR_DATA);
+   # SetIndexBuffer(4,lup    ,INDICATOR_DATA);
+   # SetIndexBuffer(5,ldn    ,INDICATOR_DATA);
+   # SetIndexBuffer(6,itrend ,INDICATOR_DATA);
+   # SetIndexBuffer(7,itrendc,INDICATOR_COLOR_INDEX);
+   # SetIndexBuffer(8,count  ,INDICATOR_CALCULATIONS);
+  - 4
+  - 5
+shift: 0
+

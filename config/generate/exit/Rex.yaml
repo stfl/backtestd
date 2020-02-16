@@ -1,0 +1,34 @@
+---
+name: Rex
+name_indi: Rex
+indi_type: TwoLinesCross
+inputs:
+# input uint           InpPeriod      =  14;         // Rex period
+  - - Int
+    - - 14.0
+      - 4.0
+      - 30.0
+      - 2.0
+# input ENUM_MA_METHOD InpMethod      =  MODE_SMA;   // Rex method
+  - - Int
+    - - 0.0
+      - 0.0
+      - 3.0
+      - 1.0
+# input uint           InpPeriodSig   =  14;         // Signal period
+  - - Int
+    - - 14.0
+      - 4.0
+      - 30.0
+      - 2.0
+# input ENUM_MA_METHOD InpMethodSig   =  MODE_SMA;   // Signal method
+  - - Int
+    - - 0.0
+      - 0.0
+      - 3.0
+      - 1.0
+buffers:
+  - 0  # up buffer
+  - 1  # down buffer
+shift: 0
+

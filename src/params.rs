@@ -486,7 +486,6 @@ pub fn get_reports_path(common: &CommonParams, run: &RunParams) -> Result<PathBu
     let reports_path = get_reports_dir(&common, &run)?
         .join(&run.name)
         .with_extension("xml");
-    // reports_path.set_extension("xml");
     Ok(reports_path)
 }
 

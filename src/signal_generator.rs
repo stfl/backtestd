@@ -283,6 +283,7 @@ mod tests {
             ],
             buffers: vec![0u8],
             levels: None,
+            colors: None,
             shift: 0,
         };
         assert!(generate_signal(&sig_params, Path::new("/tmp")).is_err()); // only one buffer given
@@ -346,6 +347,7 @@ PRODUCE_supertrendsignal \
             ],
             buffers: vec![0u8],
             levels: None,
+            colors: None,
             shift: 0,
         };
         let indi = Indicator::from(&sig_params);

@@ -58,7 +58,7 @@ if [[ $ret == 0 ]]; then
 fi
 
 popd
-command cp -f config/run_single.yaml /tmp/run.yaml
+command cp -f config/run_test.yaml /tmp/run.yaml
 echo "  confirm: config/indicator/$out_dir/$indi" >> /tmp/run.yaml
 
 # run a single backtest with the new signal as confirmation

@@ -47,6 +47,7 @@ pub fn read_results_xml(
     input_indi_set: &IndicatorSet,
     results_file: PathBuf,
 ) -> Result<Vec<BacktestResult>> {
+    debug!("reading results from {:?}", results_file);
     let mut report_reader = Reader::from_file(results_file.as_path())?;
     report_reader.trim_text(true);
     let mut count = 0;
@@ -101,11 +102,18 @@ pub fn read_results_xml(
         count - 1 == rows.len(),
         "something went wrong with the row count"
     );
-    info!(
-        "read {} rows from {:?}",
-        count - 1,
-        results_file.file_name().unwrap()
-    );
+    if rows.len() == 0 {
+        warn!(
+            "read {} rows from {:?}",
+            count - 1,
+            results_file.file_name().unwrap())
+    } else {
+        info!(
+            "read {} rows from {:?}",
+            count - 1,
+            results_file.file_name().unwrap()
+        );
+    }
     Ok(rows)
 }
 

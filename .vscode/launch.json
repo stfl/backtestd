@@ -8,19 +8,6 @@
             "name": "Run",
             "type": "lldb",
             "request": "launch",
-            "program": "./target/debug/backtest-run",
-            "args": ["run", "config/run.yaml"],
-            "cwd": "${workspaceRoot}",
-            "env": {
-                "RUST_LOG": "error",
-                "RUST_LOG_STYLE": "always",
-                "RUST_BACKTRACE": "1",
-            },
-        },
-        {
-            "name": "Run2",
-            "type": "lldb",
-            "request": "launch",
             "cargo": {
                 "args": ["build", "--bin=backtest-run", "--package=backtest-run"],
                 "filter": {
@@ -28,7 +15,10 @@
                     "kind": "bin"
                 },
             },
-            "args": ["run", "config/run.yaml"],
+            "args": [
+                "-c", "config/config_single.yaml",
+                "run", "config/run_single.yaml"
+            ],
             "cwd": "${workspaceRoot}",
             "sourceLanguages": ["rust"],
         },

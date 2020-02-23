@@ -18,8 +18,9 @@ use chrono::prelude::*;
 
 // use heim_common::prelude::futures::stream::*;
 // use futures::prelude::*;
-use std::process::{Child, Command, ExitStatus};
+use std::process::{Child, Command, ExitStatus, Stdio};
 // use heim::process::Process;
+use std::{thread, time};
 
 #[derive(Debug)]
 pub struct BacktestRunner {
@@ -74,25 +75,26 @@ impl BacktestRunner {
                     .context("conversion error for terminal.exe path")?,
             );
         }
-        cmd.arg(format!("/config:{}", "terminal.ini"));
-        cmd.current_dir(&self.common.workdir);
+        cmd.arg(format!("/config:{}", "terminal.ini"))
+           .current_dir(&self.common.workdir);
         debug!("running terminal: {:?}", cmd);
 
-        let output = cmd.output().context("Terminal Command execution failed")?;
-        debug!(
-            "Terminal out: {}{}",
-            String::from_utf8_lossy(&output.stdout).trim(),
-            String::from_utf8_lossy(&output.stderr).trim()
-        );
-        Ok(output.status)
+        let mut child = cmd.spawn().context("Command spawning failed")?;
+        let ret = child.wait().context("Waiting for Command failed");
+        if self.common.wine {
+            // sleep a little for wine to properly terminate
+            thread::sleep(time::Duration::from_millis(5000));
+        }
+        ret
     }
 
     pub fn run_backtest(&self, keep_reports: bool) -> Result<Vec<BacktestResult>> {
         self.write_indi_params()?;
         fs::create_dir_all(get_reports_dir(&self.common, &self.run)?)?;
         self.write_terminal_config()?;
-        self.delete_terminal_log()?;
+        let _ = self.delete_terminal_log();
         self.run_terminal()?;
+        let _ = self.save_terminal_log();
         let results = self.collect_report()?;
 
         if !keep_reports {
@@ -101,26 +103,32 @@ impl BacktestRunner {
             // TODO cannot delete if not empty
             // fs::remove_dir(get_reports_dir(&self.common, &self.run)?)?;
         }
-        let run_log = self.save_terminal_log()?;
-        debug!("{:?}", run_log);
         Ok(results)
     }
 
     fn delete_terminal_log(&self) -> Result<()> {
-        let log_path = self.get_terminal_log_path();
+        let log_path = self.get_original_log_path();
         if let Err(e) = fs::remove_file(&log_path) {
-            debug!("removing terminal log failed {:?} {}", log_path, e);
+            warn!("removing terminal log failed {:?} {}", log_path, e);
         }
         Ok(())
     }
 
     fn save_terminal_log(&self) -> Result<PathBuf> {
         let run_log = get_reports_path(&self.common, &self.run)?.with_extension("log");
-        fs::rename(self.get_terminal_log_path(), &run_log)?;
+        if fs::rename(self.get_original_log_path(), &run_log).is_ok() {
+            match fs::read(&run_log) {
+                Ok(s) => debug!("Tester output:\n{}", String::from_utf8_lossy(&s)),
+                Err(e) => error!("reading {:?} failed: {:?}", &run_log, e),
+            };
+        } else {
+            error!("copying log failed");
+            return Err(anyhow!("copying log failed"));
+        }
         Ok(run_log)
     }
 
-    fn get_terminal_log_path(&self) -> PathBuf {
+    fn get_original_log_path(&self) -> PathBuf {
         self.common
             .workdir
             .join("Tester/logs")

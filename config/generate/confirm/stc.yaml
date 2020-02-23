@@ -31,8 +31,8 @@ inputs:
 buffers:
   - 0   # signal line
 levels:
-  - 25  # up enter
+  - 75  # up enter
   - 25  # up exit
-  - 75  # down enter
+  - 25  # down enter
   - 75  # down exit
 

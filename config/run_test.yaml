@@ -1,13 +1,5 @@
 ---
 name: bt_run
-indi_set:
-  confirm: config/indicator/confirm/tct.yaml
-  confirm2: ~
-  confirm3: ~
-  exit: ~
-  cont: ~
-  baseline: ~
-  volume: ~
 date:
   - 2018-01-01T00:00:00-00:00
   - 2019-12-11T00:00:00-00:00
@@ -33,3 +25,11 @@ optimize_crit: 6
 visual: true
 symbols:
   - EURUSD
+indi_set:
+  confirm2: ~
+  confirm3: ~
+  exit: ~
+  cont: ~
+  baseline: ~
+  volume: ~
+  # confirm: config/indicator/baseline/ALF2_baseline.yaml

@@ -1,7 +1,7 @@
 ---
 name: bt_run
 indi_set:
-  confirm: config/indicator/baseline/ALF2_baseline.yaml
+  confirm: config/indicator/volume/volatility_ratio.yaml
   confirm2: ~
   confirm3: ~
   exit: ~

@@ -16,7 +16,7 @@ login: "7090"
 use_remote: false
 use_local: true
 replace_report: true
-shutdown_terminal: false
+shutdown_terminal: true
 deposit: 100000
 currency: USD
 leverage: 500

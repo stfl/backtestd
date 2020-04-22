@@ -1,7 +1,7 @@
 ---
 name: COG
 name_indi: center-of-gravity-extended-indicator
-indi_type: SingleLineColorChange
+indi_type: ColorChange
 inputs:
 # Period
   - - Int

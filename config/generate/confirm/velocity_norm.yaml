@@ -1,7 +1,7 @@
 ---
 name: Velocity_norm
 name_indi: Velocity_-_normalized
-indi_type: SingleLineColorChange
+indi_type: ColorChange
 inputs:
 # input ENUM_TIMEFRAMES TimeFrame       = PERIOD_CURRENT; // Time frame
   - - Int

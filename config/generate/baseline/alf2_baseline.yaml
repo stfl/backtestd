@@ -1,7 +1,7 @@
 ---
 name: ALF2_baseline
 name_indi: Adaptive_Laguerre_filter_2
-indi_type: OnChart
+indi_type: PriceCross
 inputs:
 # input ENUM_TIMEFRAMES TimeFrame       = PERIOD_CURRENT; // Time frame
   - - Int

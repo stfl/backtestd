@@ -1,7 +1,0 @@
----
-name: Aroon
-inputs:
-  - - 4.0
-    - 30.0
-    - 2.0
-shift: 0

@@ -1,7 +1,7 @@
 ---
-name: Corr_avg_baseline
+name: Corr_avg
 name_indi: Corr_average
-indi_type: OnChart
+indi_type: ColorChange
 inputs:
 
 # input ENUM_TIMEFRAMES TimeFrame        = PERIOD_CURRENT; // Time frame
@@ -38,8 +38,11 @@ inputs:
       - 0.1
 # input chgColor        ColorOn          = chg_onOrig;     // Color change on :
   - - Int
-    - - 3.0
-# input int             FlPeriod         = 25;             // Period for finding floating levels
+    - - 0.0
+      - 0.0
+      - 3.0
+      - 1.0
+# in ut int             FlPeriod         = 25;             // Period for finding floating levels
   - - Int
     - - 25.0
       - 15.0
@@ -74,6 +77,10 @@ buffers:
    # SetIndexBuffer(5,val  ,INDICATOR_DATA);
    # SetIndexBuffer(6,valc ,INDICATOR_COLOR_INDEX);
    # SetIndexBuffer(7,count,INDICATOR_CALCULATIONS);
-  - 5
+  - 6
+colors:
+  - 0
+  - 1
+  - 2
 shift: 0
 

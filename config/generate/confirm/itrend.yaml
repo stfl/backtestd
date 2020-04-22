@@ -1,7 +1,7 @@
 ---
 name: iTrend
 name_indi: iTrend
-indi_type: SingleLineColorChange
+indi_type: ColorChange
 inputs:
 
 # input ENUM_TIMEFRAMES TimeFrame         = PERIOD_CURRENT; // Time frame

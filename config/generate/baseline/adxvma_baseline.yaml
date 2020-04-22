@@ -1,7 +1,7 @@
 ---
 name: Adxvma_baseline
 name_indi: adxvma_1_1
-indi_type: OnChart
+indi_type: PriceCross
 inputs:
     # input int      AdxVmaPeriod = 14;       // Calculation period
   - - Int

@@ -1,7 +1,7 @@
 ---
 name: Plombiers
 name_indi: plombiers-indicator
-indi_type: OnChartReverse
+indi_type: PriceCrossInverted
 inputs:
 # input int  bars_IN = 145;   // data length
   - - Int

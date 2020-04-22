@@ -1,7 +1,7 @@
 ---
 name: Corr_momentum
 name_indi: Corr_momentum
-indi_type: SingleLineColorChange
+indi_type: ColorChange
 inputs:
 # input int        MomPeriod        = 32;          // Momentum period
   - - Int

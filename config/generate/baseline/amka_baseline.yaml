@@ -1,7 +1,7 @@
 ---
 name: Amka_baseline
 name_indi: amka-indicator
-indi_type: OnChart
+indi_type: PriceCross
 inputs:
 # input int ama_period=9; // Period of AMA
   - - Int

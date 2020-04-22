@@ -1,7 +1,7 @@
 ---
 name: Adxvma
 name_indi: adxvma_1_1
-indi_type: SingleLineSlope
+indi_type: SlopeChange
 inputs:
     # input int      AdxVmaPeriod = 14;       // Calculation period
   - - Int

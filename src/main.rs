@@ -1,8 +1,12 @@
 // #![warn(rust_2018_idioms)]
 #![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
+#![allow(unused)]
 #![feature(test)]
+
+#[macro_use]
+extern crate diesel;
+extern crate dotenv;
+extern crate uuid;
 
 // std includes
 use std::path::{Path, PathBuf};
@@ -54,6 +58,13 @@ mod signal_generator;
 use signal_generator::*;
 mod xml_reader;
 use xml_reader::*;
+
+mod database;
+
+use diesel::prelude::*;
+use dotenv::dotenv;
+use std::env;
+
 
 #[actix_rt::main]
 // async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -111,14 +122,17 @@ async fn main() -> std::io::Result<()> {
             (@arg INPUT: +required "yaml file the specifies the run params")
             (@arg KEEP: -k --("keep-reports") "keep the xml reports")
         )
-        (@subcommand gen =>
-            (about: "generate an indicator signal")
-            (@arg INPUT: +required "yaml file the specifies signal params")
-            (@arg HEADER: -h --("header-out-dir") +takes_value "signal header source output dir")
-            (@arg INDI: -i --("indi-out-dir") +takes_value "indicator params output dir")
-        )
+        // (@subcommand gen =>
+        //     (about: "generate an indicator signal")
+        //     (@arg INPUT: +required "yaml file the specifies signal params")
+        //     (@arg HEADER: -h --("header-out-dir") +takes_value "signal header source output dir")
+        //     (@arg INDI: -i --("indi-out-dir") +takes_value "indicator params output dir")
+        // )
         (@subcommand daemon =>
             (about: "start a daemon with a REST API")
+        )
+        (@subcommand importindicators =>
+            (about: "import indicator config into database")
         )
     )
     .get_matches();
@@ -202,6 +216,15 @@ async fn main() -> std::io::Result<()> {
         let runner = BacktestRunner::new(run, &config);
         let _ = runner.run_backtest(matches.is_present("KEEP"));
         // .expect("running backtest failed");
+        return Ok(());
+    }
+
+    if let Some(matches) = matches.subcommand_matches("importindicators") {
+        info!("importing indicator configs");
+        dotenv().ok();
+        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let conn = PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url));
+        database::legacy_import::load_all_indicators_from_file(&conn).expect("could not load indicators");
         return Ok(());
     }
 

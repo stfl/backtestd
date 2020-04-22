@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
 use super::params::*;
 use super::xml_reader;
 use super::xml_reader::*;

@@ -1,7 +1,3 @@
-#![allow(unused_imports)]
-#![allow(unused_extern_crates)]
-#![allow(dead_code)]
-
 use std::{
     fs, io,
     path::{Path, PathBuf},

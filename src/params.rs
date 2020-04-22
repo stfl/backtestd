@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
 use std::collections::VecDeque;
 use std::convert::TryFrom;
 use std::ffi::{OsStr, OsString};
@@ -9,11 +6,13 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use anyhow::{ensure, Context, Result};
+use bigdecimal::BigDecimal;
 use chrono::prelude::*;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, json};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use std::str::FromStr;
 
 const FOREX_PAIRS: &'static [&'static str] = &[
     "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
@@ -25,7 +24,7 @@ const FOREX_PAIRS: &'static [&'static str] = &[
 #[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
 pub struct Indicator {
     pub name: String,
-    pub inputs: Vec<Vec<f32>>,
+    pub inputs: Vec<Vec<BigDecimal>>,
     pub shift: u8,
 }
 
@@ -64,36 +63,40 @@ impl Indicator {
         Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
     }
 
-    fn parse_result_set(&self, result_params: &mut VecDeque<f32>) -> Self {
-        Indicator {
-            name: self.name.clone(),
-            shift: self.shift,
-            inputs: self
-                .inputs
-                .clone()
-                .into_iter()
-                .map(|inp| {
-                    if (3..=4).contains(&inp.len()) {
-                        vec![result_params
-                            .pop_front()
-                            .expect("no more params found in result")]
-                    // TODO we MUST have a value here otherwise something went wrong with the test run
-                    // TODO assert value is in range
-                    } else {
-                        inp
-                    }
-                })
-                .collect(),
-        }
-    }
+    // fn parse_result_set(&self, result_params: &mut VecDeque<f32>) -> Self {
+    //     Indicator {
+    //         name: self.name.clone(),
+    //         shift: self.shift,
+    //         inputs: self
+    //             .inputs
+    //             .clone()
+    //             .into_iter()
+    //             .map(|inp| {
+    //                 if (3..=4).contains(&inp.len()) {
+    //                     vec![result_params
+    //                         .pop_front()
+    //                         .expect("no more params found in result")]
+    //                 // TODO we MUST have a value here otherwise something went wrong with the test run
+    //                 // TODO assert value is in range
+    //                 } else {
+    //                     inp
+    //                 }
+    //             })
+    //             .collect(),
+    //     }
+    // }
 }
 
-fn input_param_str(input: &Vec<f32>) -> Result<String> {
+fn input_param_str(input: &Vec<BigDecimal>) -> Result<String> {
     match input.len() {
-        1 => Ok(format!("{:.2}||0||0||0||N", input[0] as f32)),
+        1 => Ok(format!("{:.2}||0||0||0||N", input[0])),
         3 => Ok(format!(
             "0||{:.2}||{:.2}||{:.2}||Y",
-            input[0] as f32, input[2] as f32, input[1] as f32
+            input[0], input[2], input[1]
+        )),
+        4 => Ok(format!(
+            "{:.2}||{:.2}||{:.2}||{:.2}||Y",
+            input[0], input[1], input[3], input[2]
         )),
         e => Err(anyhow!("wrong length of indicator params input: {}", e)),
     }
@@ -145,38 +148,38 @@ impl IndicatorSet {
         Ok(string)
     }
 
-    pub fn parse_result_set(&self, mut result_params: VecDeque<f32>) -> IndicatorSet {
-        IndicatorSet {
-            confirm: self
-                .confirm
-                .as_ref()
-                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-            confirm2: self
-                .confirm2
-                .as_ref()
-                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-            confirm3: self
-                .confirm3
-                .as_ref()
-                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-            exit: self
-                .exit
-                .as_ref()
-                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-            cont: self
-                .cont
-                .as_ref()
-                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-            baseline: self
-                .baseline
-                .as_ref()
-                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-            volume: self
-                .volume
-                .as_ref()
-                .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-        }
-    }
+    // pub fn parse_result_set(&self, mut result_params: VecDeque<f32>) -> IndicatorSet {
+    //     IndicatorSet {
+    //         confirm: self
+    //             .confirm
+    //             .as_ref()
+    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+    //         confirm2: self
+    //             .confirm2
+    //             .as_ref()
+    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+    //         confirm3: self
+    //             .confirm3
+    //             .as_ref()
+    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+    //         exit: self
+    //             .exit
+    //             .as_ref()
+    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+    //         cont: self
+    //             .cont
+    //             .as_ref()
+    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+    //         baseline: self
+    //             .baseline
+    //             .as_ref()
+    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+    //         volume: self
+    //             .volume
+    //             .as_ref()
+    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
+    //     }
+    // }
 }
 
 // TODO impl Iterator
@@ -540,10 +543,47 @@ impl Default for OptimizeCrit {
     }
 }
 
+pub fn vec_to_bigdecimal(vec: Vec<f32>) -> Vec<BigDecimal> {
+    vec.iter().map(|v| (*v).into()).collect()
+}
+
+pub fn vec_vec_to_bigdecimal(vec: Vec<Vec<f32>>) -> Vec<Vec<BigDecimal>> {
+    vec.iter().map(|v| vec_to_bigdecimal(v.to_vec())).collect()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use std::path::Path;
+
+    #[test]
+    fn to_bigdecimal_test() {
+        assert_eq!(
+            vec_to_bigdecimal(vec![3.]),
+            vec![BigDecimal::from_str("3.").unwrap()]
+        );
+        assert_eq!(vec_to_bigdecimal(vec![3.]), vec![BigDecimal::from(3.)]);
+        assert_eq!(vec_to_bigdecimal(vec![3.]), vec![(3.).into()]);
+        assert_eq!(
+            vec_to_bigdecimal(vec![3., 5.8, 60f32]),
+            vec![
+                BigDecimal::from(3.),
+                BigDecimal::from(5.8),
+                BigDecimal::from(60)
+            ]
+        );
+        assert_eq!(
+            vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
+            vec![
+                vec![BigDecimal::from(1.)],
+                vec![
+                    BigDecimal::from(10.),
+                    BigDecimal::from(200.),
+                    BigDecimal::from(5.)
+                ]
+            ]
+        );
+    }
 
     #[test]
     fn indicator_config_test() {
@@ -565,7 +605,7 @@ Confirm_Shift=7
 "
         );
 
-        indi.inputs.push(vec![3.]);
+        indi.inputs.push(vec_to_bigdecimal(vec![3.]));
         assert_eq!(
             indi.to_params_config("Confirm").unwrap(),
             "Confirm_Indicator=ama
@@ -574,7 +614,7 @@ Confirm_Shift=7
 "
         );
 
-        indi.inputs.push(vec![4.]);
+        indi.inputs.push(vec_to_bigdecimal(vec![4.]));
         assert_eq!(
             indi.to_params_config("Confirm").unwrap(),
             "Confirm_Indicator=ama
@@ -584,7 +624,7 @@ Confirm_Shift=7
 "
         );
 
-        indi.inputs.push(vec![10., 200., 0.5]);
+        indi.inputs.push(vec_to_bigdecimal(vec![10., 200., 0.5]));
         assert_eq!(
             indi.to_params_config("Baseline").unwrap(),
             "Baseline_Indicator=ama
@@ -595,7 +635,7 @@ Baseline_Shift=7
 "
         );
 
-        indi.inputs.push(vec![10., 0.5]);
+        indi.inputs.push(vec_to_bigdecimal(vec![10., 0.5]));
         assert!(indi.to_params_config("Baseline").is_err());
     }
 
@@ -752,29 +792,29 @@ Baseline_Shift=7
             indi_set: IndicatorSet {
                 confirm: Some(Indicator {
                     name: "ma".to_string(),
-                    inputs: vec![vec![1.], vec![1., 100., 3.]],
+                    inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
                     shift: 0,
                 }),
                 confirm2: Some(Indicator {
                     name: "ma2".to_string(),
-                    inputs: vec![vec![1.], vec![10., 200., 5.]],
+                    inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
                     shift: 1,
                 }),
                 confirm3: None,
                 exit: Some(Indicator {
                     name: "exitor".to_string(),
-                    inputs: vec![vec![14., 100., 3.], vec![1., 30., 2.]],
+                    inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
                     shift: 2,
                 }),
                 cont: None,
                 baseline: Some(Indicator {
                     name: "Ichy".to_string(),
-                    inputs: vec![vec![41.], vec![10.]],
+                    inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
                     shift: 0,
                 }),
                 volume: Some(Indicator {
                     name: "WAE".to_string(),
-                    inputs: vec![vec![7.], vec![222.]],
+                    inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
                     shift: 0,
                 }),
             },
@@ -875,29 +915,29 @@ Report=reports\test.xml"
             indi_set: IndicatorSet {
                 confirm: Some(Indicator {
                     name: "ma".to_string(),
-                    inputs: vec![vec![1.], vec![1., 100., 3.]],
+                    inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
                     shift: 0,
                 }),
                 confirm2: Some(Indicator {
                     name: "ma2".to_string(),
-                    inputs: vec![vec![1.], vec![10., 200., 5.]],
+                    inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
                     shift: 1,
                 }),
                 confirm3: None,
                 exit: Some(Indicator {
                     name: "exitor".to_string(),
-                    inputs: vec![vec![14., 100., 3.], vec![1., 30., 2.]],
+                    inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
                     shift: 2,
                 }),
                 cont: None,
                 baseline: Some(Indicator {
                     name: "Ichy".to_string(),
-                    inputs: vec![vec![41.], vec![10.]],
+                    inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
                     shift: 0,
                 }),
                 volume: Some(Indicator {
                     name: "WAE".to_string(),
-                    inputs: vec![vec![7.], vec![222.]],
+                    inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
                     shift: 0,
                 }),
             },

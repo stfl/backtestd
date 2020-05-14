@@ -16,8 +16,15 @@ use std::str::FromStr;
 
 pub mod signal_class;
 pub mod indi_func;
+pub mod indicator_set;
+mod to_config;
+mod to_param_string;
+// mod to_term
+pub mod indicator;
 
+use indicator_set::IndicatorSet;
 use signal_class::SignalClass;
+use to_param_string::ToParamString;
 
 const FOREX_PAIRS: &'static [&'static str] = &[
     "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
@@ -26,173 +33,6 @@ const FOREX_PAIRS: &'static [&'static str] = &[
     "CADJPY",
 ];
 
-#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
-pub struct Indicator {
-    pub name: String,
-    pub inputs: Vec<Vec<BigDecimal>>,
-    pub shift: u8,
-    pub buffers: Option<Vec<u8>>,
-    pub params: Option<Vec<BigDecimal>>,
-    pub class: SignalClass,
-}
-
-impl Indicator {
-    // maybe implement io::Write instead?
-    pub fn to_params_config<'a>(&self, use_case: &'a str) -> Result<String> {
-        let mut string: String = format!(
-            "{use_case}_Indicator={name}\n",
-            use_case = use_case,
-            name = self.name
-        );
-        for (i, inp) in self.inputs.iter().enumerate() {
-            string.push_str(&format!(
-                // TODO remove _Double
-                "{use_case}_double{idx}=\
-                 {input_value}\n",
-                use_case = use_case,
-                input_value = input_param_str(inp)?,
-                idx = i,
-            ));
-        }
-        if self.shift > 0 {
-            string.push_str(&format!("{}_Shift={}\n", use_case, self.shift));
-        }
-
-        Ok(string)
-    }
-
-    pub fn from_file(file: &str) -> Result<Self> {
-        let json_file = File::open(Path::new(file))?;
-        Ok(serde_json::from_reader(json_file)?)
-    }
-
-    pub fn to_file(&self, file: &str) -> Result<()> {
-        let json_file = File::create(Path::new(file))?;
-        Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
-    }
-
-    // fn parse_result_set(&self, result_params: &mut VecDeque<f32>) -> Self {
-    //     Indicator {
-    //         name: self.name.clone(),
-    //         shift: self.shift,
-    //         inputs: self
-    //             .inputs
-    //             .clone()
-    //             .into_iter()
-    //             .map(|inp| {
-    //                 if (3..=4).contains(&inp.len()) {
-    //                     vec![result_params
-    //                         .pop_front()
-    //                         .expect("no more params found in result")]
-    //                 // TODO we MUST have a value here otherwise something went wrong with the test run
-    //                 // TODO assert value is in range
-    //                 } else {
-    //                     inp
-    //                 }
-    //             })
-    //             .collect(),
-    //     }
-    // }
-}
-
-fn input_param_str(input: &Vec<BigDecimal>) -> Result<String> {
-    match input.len() {
-        1 => Ok(format!("{:.2}||0||0||0||N", input[0])),
-        3 => Ok(format!(
-            "0||{:.2}||{:.2}||{:.2}||Y",
-            input[0], input[2], input[1]
-        )),
-        4 => Ok(format!(
-            "{:.2}||{:.2}||{:.2}||{:.2}||Y",
-            input[0], input[1], input[3], input[2]
-        )),
-        e => Err(anyhow!("wrong length of indicator params input: {}", e)),
-    }
-}
-
-#[derive(Default, Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
-pub struct IndicatorSet {
-    pub confirm: Option<Indicator>,
-    pub confirm2: Option<Indicator>,
-    pub confirm3: Option<Indicator>,
-    pub exit: Option<Indicator>,
-    pub cont: Option<Indicator>,
-    pub baseline: Option<Indicator>,
-    pub volume: Option<Indicator>,
-}
-
-impl IndicatorSet {
-    fn to_params_config(&self) -> Result<String> {
-        let mut string = String::new();
-        match &self.confirm {
-            Some(i) => string.push_str(&i.to_params_config("Confirm")?),
-            _ => (),
-        }
-        match &self.confirm2 {
-            Some(i) => string.push_str(&i.to_params_config("Confirm2")?),
-            _ => (),
-        }
-        match &self.confirm3 {
-            Some(i) => string.push_str(&i.to_params_config("Confirm3")?),
-            _ => (),
-        }
-        match &self.cont {
-            Some(i) => string.push_str(&i.to_params_config("Continue")?),
-            _ => (),
-        }
-        match &self.exit {
-            Some(i) => string.push_str(&i.to_params_config("Exit")?),
-            _ => (),
-        }
-        match &self.baseline {
-            Some(i) => string.push_str(&i.to_params_config("Baseline")?),
-            _ => (),
-        }
-        match &self.volume {
-            Some(i) => string.push_str(&i.to_params_config("Volume")?),
-            _ => (),
-        }
-
-        Ok(string)
-    }
-
-    // pub fn parse_result_set(&self, mut result_params: VecDeque<f32>) -> IndicatorSet {
-    //     IndicatorSet {
-    //         confirm: self
-    //             .confirm
-    //             .as_ref()
-    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-    //         confirm2: self
-    //             .confirm2
-    //             .as_ref()
-    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-    //         confirm3: self
-    //             .confirm3
-    //             .as_ref()
-    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-    //         exit: self
-    //             .exit
-    //             .as_ref()
-    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-    //         cont: self
-    //             .cont
-    //             .as_ref()
-    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-    //         baseline: self
-    //             .baseline
-    //             .as_ref()
-    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-    //         volume: self
-    //             .volume
-    //             .as_ref()
-    //             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-    //     }
-    // }
-}
-
-// TODO impl Iterator
-// create a indi_list Vec<&Indicator>
-// return indi_list.iter();
 
 // input from the API
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -210,7 +50,7 @@ pub struct RunParams {
 
 impl RunParams {
     pub fn to_params_config(&self) -> Result<String> {
-        let mut string = self.indi_set.to_params_config()?;
+        let mut string = self.indi_set.to_param_string();
         for (i, symbol) in self.symbols.iter().enumerate() {
             string.push_str(&format!(
                 "Expert_symbol{idx}={symbol}\n",

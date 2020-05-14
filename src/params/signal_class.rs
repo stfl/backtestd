@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 // FIXME define values same as in MQL
 #[derive(Debug, PartialEq, PartialOrd, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
 pub enum SignalClass {
-   Preset = 0,
+   Preset,
    ZeroLineCross,
    TwoLinesCross,
    TwoLinesTwoLevelsCross,

@@ -128,6 +128,70 @@ mod test {
         assert_eq!(indi.to_param_string_vec(),
                    vec!["Indicator=ama",
                         "SignalClass=Preset",
-                        "Shift=0"].iter().map(|s| s.to_string()).collect::<Vec<String>>())
+                        "Shift=0"].iter().map(|s| s.to_string()).collect::<Vec<String>>());
+
+        // indi.inputs = vec_vec_to_bigdecimal(vec![[3.0]]);
+        // assert_eq!(indi.to_param_string_vec(),
+        //            vec!["Indicator=ama",
+        //                 "SignalClass=Preset",
+        //                 "Shift=0",
+        //                 "double0=double0=3.00||0||0||0||N"
+        //            ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
+
+        // indi.inputs = vec_vec_to_bigdecimal(vec![[3.0, 10., 1.0]]);
+        // assert_eq!(indi.to_param_string_vec(),
+        //            vec!["Indicator=ama",
+        //                 "SignalClass=Preset",
+        //                 "Shift=0",
+        //                 "double0=0||3.00||1.00||10.00||Y",
+        //            ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
+
+        // assert_eq!(
+        //     indi.to_params_config(),
+        //     vec!["Indicator=ama"
+        //          "SignalClass=Preset",
+        //          "Shift=0",
+        //     ]);
+
+        indi.shift = 7;
+        assert_eq!(
+            indi.to_params_config(),
+            vec!["Indicator=ama",
+                 "SignalClass=Preset",
+                 "Shift=7",
+                   ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
+
+        indi.inputs.push(vec_to_bigdecimal(vec![3.]));
+        assert_eq!(
+            indi.to_params_config(),
+            vec!["Indicator=ama",
+                 "SignalClass=Preset",
+                 "double0=3.00||0||0||0||N",
+                 "Shift=7",
+                   ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
+
+        indi.inputs.push(vec_to_bigdecimal(vec![4.]));
+        assert_eq!(
+            indi.to_params_config(),
+            vec!["Indicator=ama",
+                 "SignalClass=Preset",
+                 "double0=3.00||0||0||0||N",
+                 "double1=4.00||0||0||0||N",
+                 "Shift=7",
+                   ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
+
+        indi.inputs.push(vec_to_bigdecimal(vec![10., 200., 0.5]));
+        assert_eq!(
+            indi.to_params_config(),
+            vec![
+                "Indicator=ama",
+                "SignalClass=Preset",
+                "double0=3.00||0||0||0||N",
+                "double1=4.00||0||0||0||N",
+                "double2=0||10.00||0.50||200.00||Y",
+                "Shift=7"
+                   ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
+
+        indi.inputs.push(vec_to_bigdecimal(vec![10., 0.5]));
     }
 }

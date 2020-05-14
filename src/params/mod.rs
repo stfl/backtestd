@@ -15,6 +15,9 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::str::FromStr;
 
 pub mod signal_class;
+pub mod indi_func;
+
+use signal_class::SignalClass;
 
 const FOREX_PAIRS: &'static [&'static str] = &[
     "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
@@ -28,6 +31,9 @@ pub struct Indicator {
     pub name: String,
     pub inputs: Vec<Vec<BigDecimal>>,
     pub shift: u8,
+    pub buffers: Option<Vec<u8>>,
+    pub params: Option<Vec<BigDecimal>>,
+    pub class: SignalClass,
 }
 
 impl Indicator {
@@ -557,6 +563,7 @@ pub fn vec_vec_to_bigdecimal(vec: Vec<Vec<f32>>) -> Vec<Vec<BigDecimal>> {
 mod test {
     use super::*;
     use std::path::Path;
+    use crate::params::signal_class::SignalClass::*;
 
     #[test]
     fn to_bigdecimal_test() {
@@ -593,6 +600,9 @@ mod test {
             name: "ama".to_string(),
             shift: 0,
             inputs: Vec::new(),
+                    buffers: None,
+                    params: None,
+                    class: Preset,
         };
         assert_eq!(
             indi.to_params_config("Confirm").unwrap(),
@@ -796,28 +806,43 @@ Baseline_Shift=7
                     name: "ma".to_string(),
                     inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
                     shift: 0,
+                    buffers: None,
+                    params: None,
+                    class: Preset,
                 }),
                 confirm2: Some(Indicator {
                     name: "ma2".to_string(),
                     inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
                     shift: 1,
+                    buffers: None,
+                    params: None,
+                    class: Preset,
                 }),
                 confirm3: None,
                 exit: Some(Indicator {
                     name: "exitor".to_string(),
                     inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
                     shift: 2,
+                    buffers: None,
+                    params: None,
+                    class: Preset,
                 }),
                 cont: None,
                 baseline: Some(Indicator {
                     name: "Ichy".to_string(),
                     inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
                     shift: 0,
+                    buffers: None,
+                    params: None,
+                    class: Preset,
                 }),
                 volume: Some(Indicator {
                     name: "WAE".to_string(),
                     inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
                     shift: 0,
+                    buffers: None,
+                    params: None,
+                    class: Preset,
                 }),
             },
             date: (
@@ -919,28 +944,44 @@ Report=reports\test.xml"
                     name: "ma".to_string(),
                     inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
                     shift: 0,
+                    buffers: None,
+                    params: None,
+                    class: Preset,
+
                 }),
                 confirm2: Some(Indicator {
                     name: "ma2".to_string(),
                     inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
                     shift: 1,
+                    buffers: None,
+                    params: None,
+                    class: Preset,
                 }),
                 confirm3: None,
                 exit: Some(Indicator {
                     name: "exitor".to_string(),
                     inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
                     shift: 2,
+                    buffers: None,
+                    params: None,
+                    class: Preset,
                 }),
                 cont: None,
                 baseline: Some(Indicator {
                     name: "Ichy".to_string(),
                     inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
                     shift: 0,
+                    buffers: None,
+                    params: None,
+                    class: Preset,
                 }),
                 volume: Some(Indicator {
                     name: "WAE".to_string(),
                     inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
                     shift: 0,
+                    buffers: None,
+                    params: None,
+                    class: Preset,
                 }),
             },
             date: (

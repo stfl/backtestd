@@ -49,8 +49,8 @@ mod backtest_runner;
 use backtest_runner::*;
 mod params;
 use params::*;
-mod signal_generator;
-use signal_generator::*;
+// mod signal_generator;
+// use signal_generator::*;
 mod xml_reader;
 use xml_reader::*;
 
@@ -158,35 +158,35 @@ async fn main() -> std::io::Result<()> {
     // -------------
     // Generate Signals App
     // -------------
-    if let Some(matches) = matches.subcommand_matches("gen") {
-        let input_file = matches.value_of("INPUT").unwrap();
-        info!("Generate Signal from: {}", input_file);
-        let signal_params: SignalParams =
-            serde_any::from_file(input_file).expect("reading signal params for generation failed");
-        debug!("SignalParams {:?}", signal_params);
+    // if let Some(matches) = matches.subcommand_matches("gen") {
+    //     let input_file = matches.value_of("INPUT").unwrap();
+    //     info!("Generate Signal from: {}", input_file);
+    //     let signal_params: SignalParams =
+    //         serde_any::from_file(input_file).expect("reading signal params for generation failed");
+    //     debug!("SignalParams {:?}", signal_params);
 
-        generate_signal(
-            &signal_params,
-            &config.workdir.join("MQL5/Include/IndiSignals"),
-        )
-        .expect("generate signal failed");
-        // ?;
+    //     generate_signal(
+    //         &signal_params,
+    //         &config.workdir.join("MQL5/Include/IndiSignals"),
+    //     )
+    //     .expect("generate signal failed");
+    //     // ?;
 
-        // let indi_config_dir = Path::new(matches.value_of("HEADER").unwrap_or("config/indicator"));
-        generate_signal_includes(&config.workdir.join("MQL5/Include/IndiSignals"))
-            .expect("generating signal includes failed");
+    //     // let indi_config_dir = Path::new(matches.value_of("HEADER").unwrap_or("config/indicator"));
+    //     generate_signal_includes(&config.workdir.join("MQL5/Include/IndiSignals"))
+    //         .expect("generating signal includes failed");
 
-        let indi_config_dir = Path::new(matches.value_of("INDI").unwrap_or("config/indicator"));
-        let indi = &Indicator::from(&signal_params);
-        debug!("geneaterd indi input {:?}", indi);
-        std::fs::create_dir_all(indi_config_dir)?;
-        serde_any::to_file(
-            indi_config_dir.join(format!("{}.yaml", signal_params.name)),
-            indi,
-        )
-        .expect("writing signal input config failed");
-        return Ok(());
-    }
+    //     let indi_config_dir = Path::new(matches.value_of("INDI").unwrap_or("config/indicator"));
+    //     let indi = &Indicator::from(&signal_params);
+    //     debug!("geneaterd indi input {:?}", indi);
+    //     std::fs::create_dir_all(indi_config_dir)?;
+    //     serde_any::to_file(
+    //         indi_config_dir.join(format!("{}.yaml", signal_params.name)),
+    //         indi,
+    //     )
+    //     .expect("writing signal input config failed");
+    //     return Ok(());
+    // }
 
     // -------------
     // Run Backtest App
@@ -237,23 +237,23 @@ async fn backtest_run(
     ))
 }
 
-async fn signal_gen(
-    data: web::Json<(CommonParams, SignalParams)>,
-) -> Result<HttpResponse, ActixError> {
-    let (config, sig) = data.into_inner();
-    debug!(
-        "generating signal with common: {:#?}\nsignal_params: {:#?}",
-        config, sig
-    );
+// async fn signal_gen(
+//     data: web::Json<(CommonParams, SignalParams)>,
+// ) -> Result<HttpResponse, ActixError> {
+//     let (config, sig) = data.into_inner();
+//     debug!(
+//         "generating signal with common: {:#?}\nsignal_params: {:#?}",
+//         config, sig
+//     );
 
-    generate_signal(&sig, &config.workdir.join("MQL5/Include/IndiSignals"))
-        .map_err(|e| ErrorInternalServerError(e))?;
+//     generate_signal(&sig, &config.workdir.join("MQL5/Include/IndiSignals"))
+//         .map_err(|e| ErrorInternalServerError(e))?;
 
-    // let indi_config_dir = Path::new(matches.value_of("HEADER").unwrap_or("config/indicator"));
-    generate_signal_includes(&config.workdir.join("MQL5/Include/IndiSignals"))
-        .map_err(|e| ErrorInternalServerError(e))?;
+//     // let indi_config_dir = Path::new(matches.value_of("HEADER").unwrap_or("config/indicator"));
+//     generate_signal_includes(&config.workdir.join("MQL5/Include/IndiSignals"))
+//         .map_err(|e| ErrorInternalServerError(e))?;
 
-    // let indi = &Indicator::from(&sig);
-    // generate_signal(sig, );
-    Ok(HttpResponse::Ok().json(Indicator::from(&sig)))
-}
+//     // let indi = &Indicator::from(&sig);
+//     // generate_signal(sig, );
+//     Ok(HttpResponse::Ok().json(Indicator::from(&sig)))
+// }

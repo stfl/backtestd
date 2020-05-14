@@ -117,6 +117,9 @@ pub fn read_results_xml(
 mod xml_test {
     use super::*;
     use test;
+    use crate::params::vec_to_bigdecimal;
+    use crate::params::vec_vec_to_bigdecimal;
+    use crate::params::signal_class::SignalClass::*;
 
     #[test]
     fn read_results_xml_test() {
@@ -124,13 +127,16 @@ mod xml_test {
             confirm: Some(Indicator {
                 name: "Ash".to_owned(),
                 shift: 0u8,
-                inputs: vec![
+                inputs: vec_vec_to_bigdecimal(vec![
                     vec![14., 100., 3.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
-                ],
+                ]),
+                buffers: None,
+                params: None,
+                class: Preset,
             }),
             ..Default::default()
         };
@@ -149,14 +155,17 @@ mod xml_test {
             confirm: Some(Indicator {
                 name: "Ash".to_owned(),
                 shift: 0u8,
-                inputs: vec![
+                inputs: vec_vec_to_bigdecimal(vec![
                     vec![14., 100., 3.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
-                ],
+                ]),
+                buffers: None,
+                params: None,
+                class: Preset,
             }),
             ..Default::default()
         };
@@ -178,13 +187,16 @@ mod xml_test {
             confirm: Some(Indicator {
                 name: "Wae".to_owned(),
                 shift: 0u8,
-                inputs: vec![
+                inputs: vec_vec_to_bigdecimal(vec![
                     vec![14., 100., 3.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
-                ],
+                ]),
+                buffers: None,
+                params: None,
+                class: Preset,
             }),
             ..Default::default()
         };

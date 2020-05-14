@@ -27,10 +27,8 @@ serde_any = { version = "0.5", default-features = false, features = ["json", "ya
 
 anyhow = "1.0"
 
-# heim = "0.0.8"
-# heim-common = "0.0.8"
-# heim-process = "0.0.8"
-# heim-derive = "0.0.8"
+bigdecimal = { version ="0.1", features = ["serde"] }
+glob = "0.3"
 
 futures = "0.3"
 futures-executor = "0.3"

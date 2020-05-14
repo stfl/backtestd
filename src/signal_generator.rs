@@ -1,11 +1,11 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
 use super::params::*;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use bigdecimal::BigDecimal;
+
+use crate::params::signal_class::SignalClass;
 
 use serde_json::value::{self, Map, Value as Json};
 
@@ -21,11 +21,11 @@ use anyhow::{ensure, Context, Result};
 pub struct SignalParams {
     pub name: String,
     pub name_indi: String,
-    pub indi_type: IndicatorType,
-    pub inputs: Vec<(InputType, Vec<f32>)>,
-    pub buffers: Vec<u8>,
-    pub levels: Option<Vec<f32>>, // up_enter, up_exit, down_enter, down_exit
-    pub colors: Option<Vec<u8>>,  // COLOR_INDEX: neutr, up, down
+    pub indi_type: SignalClass,
+    pub inputs: Vec<(InputType, Vec<BigDecimal>)>,
+    pub buffers: Vec<i16>,
+    pub levels: Option<Vec<BigDecimal>>, // up_enter, up_exit, down_enter, down_exit
+    pub colors: Option<Vec<BigDecimal>>,  // COLOR_INDEX: neutr, up, down
     pub shift: u8,
 }
 
@@ -55,28 +55,27 @@ pub enum InputType {
     String = 2,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub enum IndicatorType {
-    ZeroLineCross,
-    TwoLinesCross,
-    SingleLineLevelCross,
-    LevelCross,
-    OnChart,
-    OnChartReverse,
-    Semaphore,
-    SingleLineColorChange,
-}
+// #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+// pub enum SignalClass {
+//     ZeroLineCross,
+//     TwoLinesCross,
+//     TwoLevelsCross,
+//     PriceCross,
+//     PriceCrossInverted,
+//     Semaphore,
+//     ColorChange,
+// }
 
 pub fn generate_signal(signal_params: &SignalParams, output_dir: &Path) -> Result<()> {
     match signal_params.indi_type {
-        IndicatorType::TwoLinesCross => {
+        SignalClass::TwoLinesCross => {
             if signal_params.buffers.len() < 2
                 || signal_params.buffers[0] == signal_params.buffers[1]
             {
                 ensure!(false, "TwoLinesCross needs two different buffer indeces");
             }
         }
-        IndicatorType::SingleLineLevelCross | IndicatorType::ZeroLineCross => {
+        SignalClass::TwoLevelsCross | SignalClass::ZeroLineCross => {
             ensure!(
                 signal_params.buffers.len() == 1,
                 "Only one buffer allowed for"
@@ -274,7 +273,7 @@ mod tests {
         let mut sig_params = SignalParams {
             name: "Test".to_string(),
             name_indi: "test".to_string(),
-            indi_type: IndicatorType::TwoLinesCross,
+            indi_type: SignalClass::TwoLinesCross,
             inputs: vec![
                 (InputType::Int, vec![0f32]),
                 (InputType::Int, vec![0f32]),
@@ -292,7 +291,7 @@ mod tests {
         sig_params.buffers[1] = 1u8;
         generate_signal(&sig_params, Path::new("/tmp")).unwrap();
 
-        sig_params.indi_type = IndicatorType::SingleLineLevelCross;
+        sig_params.indi_type = SignalClass::TwoLevelsCross;
         sig_params.buffers = vec![0u8];
         sig_params.levels = Some(vec![0f32]); // not enough levels
         assert!(generate_signal(&sig_params, Path::new("/tmp")).is_err());
@@ -338,7 +337,7 @@ PRODUCE_supertrendsignal \
         let mut sig_params = SignalParams {
             name: "Test".to_string(),
             name_indi: "test".to_string(),
-            indi_type: IndicatorType::TwoLinesCross,
+            indi_type: SignalClass::TwoLinesCross,
             inputs: vec![
                 (InputType::Int, vec![1f32]),
                 (InputType::Int, vec![10f32, 5f32, 20f32, 2f32]),

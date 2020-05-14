@@ -1,7 +1,6 @@
 // #![warn(rust_2018_idioms)]
 #![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
+#![allow(unused)]
 #![feature(test)]
 
 // std includes
@@ -111,12 +110,12 @@ async fn main() -> std::io::Result<()> {
             (@arg INPUT: +required "yaml file the specifies the run params")
             (@arg KEEP: -k --("keep-reports") "keep the xml reports")
         )
-        (@subcommand gen =>
-            (about: "generate an indicator signal")
-            (@arg INPUT: +required "yaml file the specifies signal params")
-            (@arg HEADER: -h --("header-out-dir") +takes_value "signal header source output dir")
-            (@arg INDI: -i --("indi-out-dir") +takes_value "indicator params output dir")
-        )
+        // (@subcommand gen =>
+        //     (about: "generate an indicator signal")
+        //     (@arg INPUT: +required "yaml file the specifies signal params")
+        //     (@arg HEADER: -h --("header-out-dir") +takes_value "signal header source output dir")
+        //     (@arg INDI: -i --("indi-out-dir") +takes_value "indicator params output dir")
+        // )
         (@subcommand daemon =>
             (about: "start a daemon with a REST API")
         )

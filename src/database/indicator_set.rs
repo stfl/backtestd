@@ -1,24 +1,11 @@
 // use serde_repr::{Serialize_repr, Deserialize_repr};
 // use super::super::params;
+use super::indicator::Indicator;
 use super::schema::*; //{indicator_sets, indicators};
-use super::indicator::*;
 use diesel::prelude::*;
+use std::collections::HashMap;
 
-use crate::params;
-
-// // Custom declaration of indicator_sets to allow derive(DbEnum) for DbIndiFunc
-// table! {
-//     use diesel::sql_types::*;
-//     use super::DbIndiFuncMapping;
-//     set_indicators (set_id, indicator_id) {
-//         set_id -> Int8,
-//         indicator_id -> Int4,
-//         func -> DbIndiFuncMapping,
-//     }
-// }
-
-// joinable!(set_indicators -> indicators (indicator_id));
-// joinable!(set_indicators -> indicator_sets (set_id));
+use crate::params::legacy_indicator::LegacyIndicator;
 
 #[derive(Queryable, Insertable, Identifiable, Associations, Debug)]
 #[primary_key(indicator_set_id, indicator_id)]
@@ -72,31 +59,31 @@ pub struct IndicatorSet {
 //     Ok(indi_set)
 // }
 
-pub fn find_db_indicator_set(
-    conn: &PgConnection,
-    indi_set: params::IndicatorSet,
-) -> Result<Option<Vec<SetIndicator>>, diesel::result::Error> {
-    // TODO
-    // for each func in indi_set
-    // find_db_indicator()
-    // SELECT indicator_id, func from indicator_sets
-    // WHERE func ==
-    unimplemented!();
-}
+// pub fn find_db_indicator_set(
+//     conn: &PgConnection,
+//     indi_set: params::IndicatorSet,
+// ) -> Result<Option<Vec<SetIndicator>>, diesel::result::Error> {
+//     // TODO
+//     // for each func in indi_set
+//     // find_db_indicator()
+//     // SELECT indicator_id, func from indicator_sets
+//     // WHERE func ==
+//     unimplemented!();
+// }
 
-pub fn store_plain_indicator_set(
-    conn: &PgConnection,
-    indi_set: &params::IndicatorSet,
-) -> QueryResult<Vec<SetIndicator>> {
-    let db_indi_set = store_new_db_indicator_set(conn)?;
-    // TODO Optional
-    // TODO
-    // for each func in indi_set
-    // find_db_indicator()
-    // insert_into
-    // if find or insert fails.. -> delete db_indi_set
-    unimplemented!();
-}
+// pub fn store_plain_indicator_set(
+//     conn: &PgConnection,
+//     indi_set: &params::IndicatorSet,
+// ) -> QueryResult<Vec<SetIndicator>> {
+//     let db_indi_set = store_new_db_indicator_set(conn)?;
+//     // TODO Optional
+//     // TODO
+//     // for each func in indi_set
+//     // find_db_indicator()
+//     // insert_into
+//     // if find or insert fails.. -> delete db_indi_set
+//     unimplemented!();
+// }
 
 pub fn store_set_indicators(
     conn: &PgConnection,

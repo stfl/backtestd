@@ -13,6 +13,8 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde_derive;
 
+use crate::database::IndicatorSet;
+
 #[derive(Debug, Deserialize, PartialEq)]
 struct Row {
     pass: u32,
@@ -102,7 +104,8 @@ pub fn read_results_xml(
         warn!(
             "read {} rows from {:?}",
             count - 1,
-            results_file.file_name().unwrap())
+            results_file.file_name().unwrap()
+        )
     } else {
         info!(
             "read {} rows from {:?}",
@@ -118,81 +121,81 @@ mod xml_test {
     use super::*;
     use test;
 
-    #[test]
-    fn read_results_xml_test() {
-        let indi_set = IndicatorSet {
-            confirm: Some(Indicator {
-                name: "Ash".to_owned(),
-                shift: 0u8,
-                inputs: vec![
-                    vec![14., 100., 3.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                ],
-            }),
-            ..Default::default()
-        };
+    // #[test]
+    // fn read_results_xml_test() {
+    //     let indi_set = IndicatorSet {
+    //         confirm: Some(Indicator {
+    //             name: "Ash".to_owned(),
+    //             shift: 0u8,
+    //             inputs: vec![
+    //                 vec![14., 100., 3.],
+    //                 vec![1., 30., 2.],
+    //                 vec![1., 30., 2.],
+    //                 vec![1., 30., 2.],
+    //                 vec![1., 30., 2.],
+    //             ],
+    //         }),
+    //         ..Default::default()
+    //     };
 
-        let rows = read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
-        assert_eq!(rows.len(), 663);
-    }
+    //     let rows = read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
+    //     assert_eq!(rows.len(), 663);
+    // }
 
-    #[test]
-    #[should_panic]
-    #[ignore]
-    // the output format has changed to directly return a Vec of the given params.
-    // no casting into IndicatorSet
-    fn xml_results_not_enough_params() {
-        let indi_set = IndicatorSet {
-            confirm: Some(Indicator {
-                name: "Ash".to_owned(),
-                shift: 0u8,
-                inputs: vec![
-                    vec![14., 100., 3.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                ],
-            }),
-            ..Default::default()
-        };
-        // we are expacting more params in result than there are given
+    // #[test]
+    // #[should_panic]
+    // #[ignore]
+    // // the output format has changed to directly return a Vec of the given params.
+    // // no casting into IndicatorSet
+    // fn xml_results_not_enough_params() {
+    //     let indi_set = IndicatorSet {
+    //         confirm: Some(Indicator {
+    //             name: "Ash".to_owned(),
+    //             shift: 0u8,
+    //             inputs: vec![
+    //                 vec![14., 100., 3.],
+    //                 vec![1., 30., 2.],
+    //                 vec![1., 30., 2.],
+    //                 vec![1., 30., 2.],
+    //                 vec![1., 30., 2.],
+    //                 vec![1., 30., 2.],
+    //             ],
+    //         }),
+    //         ..Default::default()
+    //     };
+    //     // we are expacting more params in result than there are given
 
-        // let result = std::panic::catch_unwind(|| {
-        read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
-        // });
-        // assert!(result.is_err());
+    //     // let result = std::panic::catch_unwind(|| {
+    //     read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
+    //     // });
+    //     // assert!(result.is_err());
 
-        // entered a random indi_set
-        /* let rows = read_results_xml(&indi_set, PathBuf::from("tests/report_AUDCAD.xml")).unwrap();
-         * assert_eq!(rows.len(), 176); */
-    }
+    //     // entered a random indi_set
+    //     /* let rows = read_results_xml(&indi_set, PathBuf::from("tests/report_AUDCAD.xml")).unwrap();
+    //      * assert_eq!(rows.len(), 176); */
+    // }
 
-    #[bench]
-    fn bench_read_results_xml(b: &mut test::Bencher) {
-        let indi_set = IndicatorSet {
-            confirm: Some(Indicator {
-                name: "Wae".to_owned(),
-                shift: 0u8,
-                inputs: vec![
-                    vec![14., 100., 3.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                ],
-            }),
-            ..Default::default()
-        };
+    // #[bench]
+    // fn bench_read_results_xml(b: &mut test::Bencher) {
+    //     let indi_set = IndicatorSet {
+    //         confirm: Some(Indicator {
+    //             name: "Wae".to_owned(),
+    //             shift: 0u8,
+    //             inputs: vec![
+    //                 vec![14., 100., 3.],
+    //                 vec![1., 30., 2.],
+    //                 vec![1., 30., 2.],
+    //                 vec![1., 30., 2.],
+    //                 vec![1., 30., 2.],
+    //             ],
+    //         }),
+    //         ..Default::default()
+    //     };
 
-        b.iter(|| {
-            let rows =
-                read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
-            assert_eq!(rows.len(), 663)
-        });
-    }
+    //     b.iter(|| {
+    //         let rows =
+    //             read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
+    //         assert_eq!(rows.len(), 663)
+    //     });
+    // }
 }

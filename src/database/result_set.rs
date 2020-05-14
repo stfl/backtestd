@@ -1,7 +1,7 @@
-use crate::database::indicator_set::IndicatorSet;
-use crate::database::run::Run;
-use crate::database::result::*;
 use crate::database::indicator_inputs_explicit::*;
+use crate::database::indicator_set::IndicatorSet;
+use crate::database::result::*;
+use crate::database::run::Run;
 
 use crate::database::schema::result_sets;
 
@@ -11,6 +11,6 @@ use crate::database::schema::result_sets;
 #[belongs_to(IndicatorInputsExplicit, foreign_key = "inputs_id")]
 #[table_name = "result_sets"]
 pub struct ResultSet {
-        pub result_id: i64,
-        pub inputs_id: i64,
+    pub result_id: i64,
+    pub inputs_id: i64,
 }

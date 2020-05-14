@@ -1,4 +1,7 @@
-use super::params::*;
+use crate::params;
+use crate::params::run_params::RunParams;
+use crate::params::terminal_params::CommonParams;
+
 use super::xml_reader;
 use super::xml_reader::*;
 
@@ -17,6 +20,11 @@ use chrono::prelude::*;
 // use futures::prelude::*;
 use std::process::{Child, Command, ExitStatus, Stdio};
 // use heim::process::Process;
+use params::{
+    run_params::{get_reports_dir, get_reports_path, to_terminal_config},
+    to_param_string::ToParamString,
+    to_terminal_config::ToTerminalConfig,
+};
 use std::{thread, time};
 
 #[derive(Debug)]
@@ -27,10 +35,10 @@ pub struct BacktestRunner {
 }
 
 impl BacktestRunner {
-    pub fn new(run: RunParams, common: &CommonParams) -> BacktestRunner {
+    pub fn new(run: RunParams, common: &CommonParams) -> Self {
         BacktestRunner {
             common: common.clone(),
-            run: run,
+            run,
         }
     }
 
@@ -41,14 +49,14 @@ impl BacktestRunner {
     fn write_indi_params(&self) -> Result<()> {
         debug!("writing {:?}", self.common.params_path());
         let mut file = File::create(self.common.params_path())?;
-        file.write_all(self.run.to_params_config()?.as_bytes())?;
+        file.write_all(self.run.to_param_string().as_bytes())?;
         Ok(())
     }
 
     fn write_terminal_config(&self) -> Result<()> {
         debug!("writing {:?}", self.common.params_path());
         let mut file = File::create(self.common.workdir.join("terminal.ini").as_path())?;
-        file.write_all(to_terminal_config(&self.common, &self.run)?.as_bytes())?;
+        file.write_all(to_terminal_config(&self.common, &self.run).as_bytes())?;
         Ok(())
     }
 
@@ -73,7 +81,7 @@ impl BacktestRunner {
             );
         }
         cmd.arg(format!("/config:{}", "terminal.ini"))
-           .current_dir(&self.common.workdir);
+            .current_dir(&self.common.workdir);
         debug!("running terminal: {:?}", cmd);
 
         let mut child = cmd.spawn().context("Command spawning failed")?;
@@ -97,7 +105,7 @@ impl BacktestRunner {
         if !keep_reports {
             // self.delete_report()?;
             // self.push_results_to_database().context(DbError)?;
-            // TODO cannot delete if not empty
+            // todo cannot delete if not empty
             // fs::remove_dir(get_reports_dir(&self.common, &self.run)?)?;
         }
         Ok(results)

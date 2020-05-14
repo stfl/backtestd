@@ -23,6 +23,8 @@ extern crate lazy_static;
 extern crate serde_derive;
 use serde_derive::Serialize;
 
+extern crate derive_more;
+
 #[macro_use]
 extern crate anyhow;
 use anyhow::{Context, Result};
@@ -51,20 +53,20 @@ use actix_web::{
 
 // own mods
 mod backtest_runner;
-use backtest_runner::*;
 mod params;
-use params::*;
 mod signal_generator;
-use signal_generator::*;
 mod xml_reader;
-use xml_reader::*;
 
 mod database;
+
+use backtest_runner::*;
+use params::terminal_params::CommonParams;
+use signal_generator::*;
+use xml_reader::*;
 
 use diesel::prelude::*;
 use dotenv::dotenv;
 use std::env;
-
 
 #[actix_rt::main]
 // async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -149,82 +151,84 @@ async fn main() -> std::io::Result<()> {
     // -------------
     // Daemon App
     // -------------
-    if let Some(matches) = matches.subcommand_matches("daemon") {
-        return HttpServer::new(move || {
-            ActixApp::new()
-                // enable logger
-                .wrap(middleware::Logger::default())
-                .data(config.clone())
-                // .data(web::Data::new(Mutex::new(config.clone())))
-                // websocket route
-                .service(web::resource("/run").route(web::post().to(backtest_run)))
-            // .service(web::resource("/generate/").route(web::get().to(gen_signal)))
-            // .service(web::resource("/config/").route(web::get().to(set_config)))
-            // static files
-            // .service(fs::Files::new("/", "static/").index_file("index.html"))
-        })
-        // start http server on 127.0.0.1:8080
-        .bind("0.0.0.0:12311")?
-        .run()
-        .await;
-        // returning here..
-    }
+    // if let Some(matches) = matches.subcommand_matches("daemon") {
+    //     return HttpServer::new(move || {
+    //         ActixApp::new()
+    //             // enable logger
+    //             .wrap(middleware::Logger::default())
+    //             .data(config.clone())
+    //             // .data(web::Data::new(Mutex::new(config.clone())))
+    //             // websocket route
+    //             .service(web::resource("/run").route(web::post().to(backtest_run)))
+    //         // .service(web::resource("/generate/").route(web::get().to(gen_signal)))
+    //         // .service(web::resource("/config/").route(web::get().to(set_config)))
+    //         // static files
+    //         // .service(fs::Files::new("/", "static/").index_file("index.html"))
+    //     })
+    //     // start http server on 127.0.0.1:8080
+    //     .bind("0.0.0.0:12311")?
+    //     .run()
+    //     .await;
+    //     // returning here..
+    // }
 
     // -------------
     // Generate Signals App
     // -------------
-    if let Some(matches) = matches.subcommand_matches("gen") {
-        let input_file = matches.value_of("INPUT").unwrap();
-        info!("Generate Signal from: {}", input_file);
-        let signal_params: SignalParams =
-            serde_any::from_file(input_file).expect("reading signal params for generation failed");
-        debug!("SignalParams {:?}", signal_params);
+    // if let Some(matches) = matches.subcommand_matches("gen") {
+    //     let input_file = matches.value_of("INPUT").unwrap();
+    //     info!("Generate Signal from: {}", input_file);
+    //     let signal_params: SignalParams =
+    //         serde_any::from_file(input_file).expect("reading signal params for generation failed");
+    //     debug!("SignalParams {:?}", signal_params);
 
-        generate_signal(
-            &signal_params,
-            &config.workdir.join("MQL5/Include/IndiSignals"),
-        )
-        .expect("generate signal failed");
-        // ?;
+    //     generate_signal(
+    //         &signal_params,
+    //         &config.workdir.join("MQL5/Include/IndiSignals"),
+    //     )
+    //     .expect("generate signal failed");
+    //     // ?;
 
-        // let indi_config_dir = Path::new(matches.value_of("HEADER").unwrap_or("config/indicator"));
-        generate_signal_includes(&config.workdir.join("MQL5/Include/IndiSignals"))
-            .expect("generating signal includes failed");
+    //     // let indi_config_dir = Path::new(matches.value_of("HEADER").unwrap_or("config/indicator"));
+    //     generate_signal_includes(&config.workdir.join("MQL5/Include/IndiSignals"))
+    //         .expect("generating signal includes failed");
 
-        let indi_config_dir = Path::new(matches.value_of("INDI").unwrap_or("config/indicator"));
-        let indi = &Indicator::from(&signal_params);
-        debug!("geneaterd indi input {:?}", indi);
-        std::fs::create_dir_all(indi_config_dir)?;
-        serde_any::to_file(
-            indi_config_dir.join(format!("{}.yaml", signal_params.name)),
-            indi,
-        )
-        .expect("writing signal input config failed");
-        return Ok(());
-    }
+    //     let indi_config_dir = Path::new(matches.value_of("INDI").unwrap_or("config/indicator"));
+    //     let indi = &Indicator::from(&signal_params);
+    //     debug!("geneaterd indi input {:?}", indi);
+    //     std::fs::create_dir_all(indi_config_dir)?;
+    //     serde_any::to_file(
+    //         indi_config_dir.join(format!("{}.yaml", signal_params.name)),
+    //         indi,
+    //     )
+    //     .expect("writing signal input config failed");
+    //     return Ok(());
+    // }
 
     // -------------
     // Run Backtest App
     // -------------
-    if let Some(matches) = matches.subcommand_matches("run") {
-        let input_file = matches.value_of("INPUT").unwrap();
-        info!("Running backtest from: {}", input_file);
-        let run: RunParams = serde_any::from_file::<RunParamsFile, _>(input_file)
-            .expect("reading RunParamsFile failed")
-            .into();
-        debug!("run: {:?}", run);
-        let runner = BacktestRunner::new(run, &config);
-        let _ = runner.run_backtest(matches.is_present("KEEP"));
-        // .expect("running backtest failed");
-        return Ok(());
-    }
+    // if let Some(matches) = matches.subcommand_matches("run") {
+    //     let input_file = matches.value_of("INPUT").unwrap();
+    //     info!("Running backtest from: {}", input_file);
+    //     let run: RunParams = serde_any::from_file::<RunParamsFile, _>(input_file)
+    //         .expect("reading RunParamsFile failed")
+    //         .into();
+    //     debug!("run: {:?}", run);
+    //     let runner = BacktestRunner::new(run, &config);
+    //     let _ = runner.run_backtest(matches.is_present("KEEP"));
+    //     // .expect("running backtest failed");
+    //     return Ok(());
+    // }
 
     if let Some(matches) = matches.subcommand_matches("importindicators") {
         info!("importing indicator configs");
         dotenv().ok();
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-        let conn = PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url));
-        database::legacy_import::load_all_indicators_from_file(&conn).expect("could not load indicators");
+        let conn = PgConnection::establish(&database_url)
+            .expect(&format!("Error connecting to {}", database_url));
+        database::legacy_import::load_all_indicators_from_file(&conn)
+            .expect("could not load indicators");
         return Ok(());
     }
 
@@ -245,39 +249,39 @@ async fn main() -> std::io::Result<()> {
 // impl actix_web::ResponseError for anyhow::Error {
 // }
 
-async fn backtest_run(
-    // data: web::Json<(CommonParams, RunParams)>, //web::Data<Mutex<CommonParams>>)
-    data: web::Json<RunParams>,
-    config: web::Data<CommonParams>,
-) -> Result<HttpResponse, ActixError> {
-    // let (config, run) = data.into_inner();
-    let run = data.into_inner();
-    let config = config.into_inner();
-    info!("running backtest with common: {:?}\nrun:{:?}", config, run);
-    Ok(HttpResponse::Ok().json(
-        BacktestRunner::new(run, &config)
-            .run_backtest(false)
-            .map_err(|e| ErrorInternalServerError(e))?,
-    ))
-}
+// async fn backtest_run(
+//     // data: web::Json<(CommonParams, RunParams)>, //web::Data<Mutex<CommonParams>>)
+//     data: web::Json<RunParams>,
+//     config: web::Data<CommonParams>,
+// ) -> Result<HttpResponse, ActixError> {
+//     // let (config, run) = data.into_inner();
+//     let run = data.into_inner();
+//     let config = config.into_inner();
+//     info!("running backtest with common: {:?}\nrun:{:?}", config, run);
+//     Ok(HttpResponse::Ok().json(
+//         BacktestRunner::new(run, &config)
+//             .run_backtest(false)
+//             .map_err(|e| ErrorInternalServerError(e))?,
+//     ))
+// }
 
-async fn signal_gen(
-    data: web::Json<(CommonParams, SignalParams)>,
-) -> Result<HttpResponse, ActixError> {
-    let (config, sig) = data.into_inner();
-    debug!(
-        "generating signal with common: {:#?}\nsignal_params: {:#?}",
-        config, sig
-    );
+// async fn signal_gen(
+//     data: web::Json<(CommonParams, SignalParams)>,
+// ) -> Result<HttpResponse, ActixError> {
+//     let (config, sig) = data.into_inner();
+//     debug!(
+//         "generating signal with common: {:#?}\nsignal_params: {:#?}",
+//         config, sig
+//     );
 
-    generate_signal(&sig, &config.workdir.join("MQL5/Include/IndiSignals"))
-        .map_err(|e| ErrorInternalServerError(e))?;
+//     generate_signal(&sig, &config.workdir.join("MQL5/Include/IndiSignals"))
+//         .map_err(|e| ErrorInternalServerError(e))?;
 
-    // let indi_config_dir = Path::new(matches.value_of("HEADER").unwrap_or("config/indicator"));
-    generate_signal_includes(&config.workdir.join("MQL5/Include/IndiSignals"))
-        .map_err(|e| ErrorInternalServerError(e))?;
+//     // let indi_config_dir = Path::new(matches.value_of("HEADER").unwrap_or("config/indicator"));
+//     generate_signal_includes(&config.workdir.join("MQL5/Include/IndiSignals"))
+//         .map_err(|e| ErrorInternalServerError(e))?;
 
-    // let indi = &Indicator::from(&sig);
-    // generate_signal(sig, );
-    Ok(HttpResponse::Ok().json(Indicator::from(&sig)))
-}
+//     // let indi = &Indicator::from(&sig);
+//     // generate_signal(sig, );
+//     Ok(HttpResponse::Ok().json(Indicator::from(&sig)))
+// }

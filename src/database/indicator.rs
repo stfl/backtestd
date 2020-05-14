@@ -1,11 +1,15 @@
-use super::super::params;
 use super::schema::*;
 use super::*;
 use crate::signal_generator;
 
+use crate::params;
+use crate::params::legacy_indicator::LegacyIndicator;
+
 use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use diesel_derive_enum::DbEnum;
+
+use derive_more::Display;
 
 // table! {
 //     use diesel::sql_types::*;
@@ -18,7 +22,7 @@ use diesel_derive_enum::DbEnum;
 
 // joinable!(indicator_default_func -> indicators (indicator_id));
 
-#[derive(Queryable, Associations, Identifiable, Debug, Clone)]
+#[derive(Queryable, Associations, Identifiable, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[primary_key(indicator_id)]
 #[table_name = "indicators"]
 #[belongs_to(Indicator, foreign_key = "parent_id")]
@@ -27,7 +31,7 @@ pub struct Indicator {
     pub indicator_id: i32,
     pub parent_id: Option<i32>,
     pub child_id: Option<i32>,
-    pub name: String,
+    pub indicator_name: String,
     pub shift: i16,
     pub func: IndiFunc,
     pub class: Option<SignalClass>,
@@ -36,12 +40,12 @@ pub struct Indicator {
     pub config: Option<Vec<BigDecimal>>,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Deserialize, Debug)]
 #[table_name = "indicators"]
 pub struct NewIndicator {
     pub parent_id: Option<i32>,
     pub child_id: Option<i32>,
-    pub indicator_name: String,  // TODO make borrowed?
+    pub indicator_name: String, // TODO make borrowed?
     pub shift: i16,
     pub func: IndiFunc,
     pub class: Option<SignalClass>,
@@ -50,7 +54,17 @@ pub struct NewIndicator {
     pub config: Option<Vec<BigDecimal>>,
 }
 
-#[derive(Queryable, Insertable, Identifiable, Associations, Debug, Clone)]
+#[derive(
+    Queryable,
+    Insertable,
+    Identifiable,
+    Associations,
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+)]
 #[primary_key(indicator_id, index)]
 #[belongs_to(Indicator, foreign_key = "indicator_id")]
 #[table_name = "indicator_inputs"]
@@ -63,7 +77,7 @@ pub struct IndicatorInput {
     pub step: Option<BigDecimal>,
 }
 
-#[derive(DbEnum, Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(DbEnum, Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize, Display)]
 pub enum IndiFunc {
     Confirm,
     Confirm2,
@@ -75,25 +89,25 @@ pub enum IndiFunc {
 }
 
 // FIXME define values same as in MQL
-#[derive(DbEnum, Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
+#[derive(DbEnum, Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize, Display)]
 pub enum SignalClass {
-   Preset = 0,
-   ZeroLineCross,
-   TwoLinesCross,
-   TwoLinesTwoLevelsCross,
-   TwoLevelsCross,
-   PriceCross,
-   PriceCrossInverted,
-   Semaphore,
-   TwoLinesColorChange,
-   ColorChange,
-   BothLinesTwoLevelsCross,
-   BothLinesLevelCross,
-   SaturationLevels,
-   SaturationLines,
-   BothLinesSaturationLevels,
-   SlopeChange,
-   TwoLinesSlopeChange,
+    Preset = 0,
+    ZeroLineCross,
+    TwoLinesCross,
+    TwoLinesTwoLevelsCross,
+    TwoLevelsCross,
+    PriceCross,
+    PriceCrossInverted,
+    Semaphore,
+    TwoLinesColorChange,
+    ColorChange,
+    BothLinesTwoLevelsCross,
+    BothLinesLevelCross,
+    SaturationLevels,
+    SaturationLines,
+    BothLinesSaturationLevels,
+    SlopeChange,
+    TwoLinesSlopeChange,
 }
 
 // #[derive(Queryable, Insertable, Identifiable, Associations, Debug)]
@@ -106,8 +120,8 @@ pub enum SignalClass {
 // }
 
 // should not be implemented like this
-// impl<'a> From<&'a params::Indicator> for NewIndicator<'a> {
-//     fn from(indi: &'a params::Indicator) -> Self {
+// impl<'a> From<&'a LegacyIndicator> for NewIndicator<'a> {
+//     fn from(indi: &'a LegacyIndicator) -> Self {
 //         NewIndicator {
 //             parent_id: None,
 //             child_id: None,
@@ -118,8 +132,8 @@ pub enum SignalClass {
 //     }
 // }
 
-impl<'a> From<(IndiFunc, &'a params::Indicator)> for NewIndicator {
-    fn from((func, indi): (IndiFunc, &'a params::Indicator)) -> Self {
+impl<'a> From<(IndiFunc, &'a LegacyIndicator)> for NewIndicator {
+    fn from((func, indi): (IndiFunc, &'a LegacyIndicator)) -> Self {
         NewIndicator {
             parent_id: None,
             child_id: None,
@@ -136,8 +150,8 @@ impl<'a> From<(IndiFunc, &'a params::Indicator)> for NewIndicator {
     }
 }
 
-impl From<(IndiFunc, params::Indicator)> for NewIndicator {
-    fn from((func, indi): (IndiFunc, params::Indicator)) -> Self {
+impl From<(IndiFunc, LegacyIndicator)> for NewIndicator {
+    fn from((func, indi): (IndiFunc, LegacyIndicator)) -> Self {
         NewIndicator {
             parent_id: None,
             child_id: None,
@@ -173,7 +187,7 @@ impl<'a> From<(IndiFunc, &'a signal_generator::SignalParams)> for NewIndicator {
                     l.clone().append(&mut c.clone());
                     Some(l.clone())
                 }
-            }
+            },
         }
     }
 }
@@ -190,11 +204,11 @@ impl<'a> From<(IndiFunc, &'a signal_generator::SignalParams)> for NewIndicator {
 //     }
 // }
 
-impl From<(Indicator, Vec<IndicatorInput>)> for params::Indicator {
+impl From<(Indicator, Vec<IndicatorInput>)> for LegacyIndicator {
     fn from((indi, mut indi_inputs): (Indicator, Vec<IndicatorInput>)) -> Self {
         indi_inputs.sort_by_key(|v| v.index);
-        params::Indicator {
-            name: indi.name,
+        LegacyIndicator {
+            name: indi.indicator_name,
             shift: indi.shift as u8,
             inputs: indi_inputs
                 .iter()
@@ -222,7 +236,7 @@ impl Indicator {
     pub fn store_child(
         self: Self,
         conn: &PgConnection,
-        indi: &params::Indicator,
+        indi: &LegacyIndicator,
     ) -> QueryResult<Indicator> {
         let child = store_indicator(conn, indi, Some(self.indicator_id), self.func)?;
         self.set_child(conn, &child)
@@ -234,7 +248,7 @@ impl Indicator {
             .values(NewIndicator {
                 parent_id: Some(self.id().to_owned()),
                 child_id: None,
-                indicator_name: self.name.to_owned(),
+                indicator_name: self.indicator_name.to_owned(),
                 shift: self.shift as i16,
                 func: self.func,
                 class: self.class,
@@ -252,11 +266,7 @@ impl Indicator {
         Ok(child)
     }
 
-    pub fn set_child(
-        self: Self,
-        conn: &PgConnection,
-        indi: &Indicator,
-    ) -> QueryResult<Indicator> {
+    pub fn set_child(self: Self, conn: &PgConnection, indi: &Indicator) -> QueryResult<Indicator> {
         unimplemented!()
     }
 
@@ -280,7 +290,6 @@ impl Indicator {
         indicators.find(indi_id).first::<Indicator>(conn)
     }
 }
-
 
 pub fn store_signal_params(
     conn: &PgConnection,
@@ -347,10 +356,10 @@ pub fn store_signal_params(
     Ok(new_indi)
 }
 
-// TODO implment a trait ToDb which params::Indicator implements
+// TODO implment a trait ToDb which LegacyIndicator implements
 pub fn store_indicator(
     conn: &PgConnection,
-    indi: &params::Indicator,
+    indi: &LegacyIndicator,
     parent: Option<i32>,
     indi_func: IndiFunc,
 ) -> Result<Indicator, diesel::result::Error> {
@@ -417,7 +426,7 @@ pub fn store_indicator(
 //     fn to_db(conn: &PgConnection) -> Result<(), Error>;
 // }
 
-// pub fn store_indicators_with_default_func(conn: &PgConnection, indis: &Vec<(DbIndiFunc, params::Indicator)>) -> QueryResult<Vec<DbIndicator>> {
+// pub fn store_indicators_with_default_func(conn: &PgConnection, indis: &Vec<(DbIndiFunc, LegacyIndicator)>) -> QueryResult<Vec<DbIndicator>> {
 //     let mut db_indis : Vec<Indicator> = vec![];
 //     for (f, i) in indis {
 //         let db_indi = store_indicator(conn, &i, None)?;
@@ -453,8 +462,7 @@ pub fn load_indicator(
 
     let indi = Indicator::try_load(conn, indi_id)?;
 
-    let indi_inputs =
-        IndicatorInput::belonging_to(&indi).get_results::<IndicatorInput>(conn)?;
+    let indi_inputs = IndicatorInput::belonging_to(&indi).get_results::<IndicatorInput>(conn)?;
 
     // let indi_inputs = indicator_inputs
     //     .filter(indicator_id.eq(indi_id))
@@ -465,7 +473,7 @@ pub fn load_indicator(
 
 pub fn find_db_indicator(
     conn: &PgConnection,
-    indi: params::Indicator,
+    indi: LegacyIndicator,
 ) -> Result<Option<(Indicator, Vec<IndicatorInput>)>, diesel::result::Error> {
     // TODO this requires a join and then checking if all lines for the inputs match
 

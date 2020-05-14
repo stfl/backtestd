@@ -1,8 +1,12 @@
-use glob::glob;
 use diesel::prelude::*;
+use glob::glob;
+use serde_any;
 
-use super::indicator::*;
+use crate::database::indicator::{store_indicator, store_signal_params};
+use crate::database::indicator::{IndiFunc, Indicator};
+
 use crate::params;
+use crate::params::legacy_indicator::LegacyIndicator;
 use crate::signal_generator;
 
 // TODO this is a really ugly implementation
@@ -28,7 +32,7 @@ pub fn load_all_indicators_from_file<'a>(conn: &PgConnection) -> QueryResult<Vec
             "continue" => Continue,
             e => panic!("unknown func {:?}", e),
         };
-        let indi: params::Indicator = serde_any::from_file(entry).unwrap();
+        let indi: LegacyIndicator = serde_any::from_file(entry).unwrap();
         indis.push(store_indicator(conn, &indi, None, func)?);
 
         // indis.push((func, &indi).into());

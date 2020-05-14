@@ -1,12 +1,12 @@
 // use super::super::params::Indicator;
 use super::schema::*;
-use crate::database::indicator::*;
+use crate::database::indicator::Indicator;
 // use super::*;
 
 use bigdecimal::BigDecimal;
 // use diesel::prelude::*;
 
-#[derive(Queryable, Associations, Identifiable, Debug, Clone)]
+#[derive(Queryable, Associations, Identifiable, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[primary_key(inputs_id)]
 #[table_name = "indicator_inputs_explicit"]
 #[belongs_to(Indicator, foreign_key = "indicator_id")]
@@ -30,7 +30,7 @@ pub struct IndicatorInputsExplicit {
     pub input14: Option<BigDecimal>,
 }
 
-#[derive(Insertable, Debug)]
+#[derive(Insertable, Debug, Deserialize)]
 #[table_name = "indicator_inputs_explicit"]
 pub struct NewIndicatorInputsExplicit {
     pub indicator_id: i32,

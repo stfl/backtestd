@@ -6,6 +6,7 @@ use std::{
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 
+use super::params::indicator_set::IndicatorSet;
 use super::params::*;
 
 use anyhow::{Context, Result};
@@ -102,7 +103,8 @@ pub fn read_results_xml(
         warn!(
             "read {} rows from {:?}",
             count - 1,
-            results_file.file_name().unwrap())
+            results_file.file_name().unwrap()
+        )
     } else {
         info!(
             "read {} rows from {:?}",
@@ -116,15 +118,21 @@ pub fn read_results_xml(
 #[cfg(test)]
 mod xml_test {
     use super::*;
-    use test;
+    use crate::params::signal_class::SignalClass::*;
     use crate::params::vec_to_bigdecimal;
     use crate::params::vec_vec_to_bigdecimal;
+    use crate::params::indi_func::IndiFunc;
+    use crate::params::indi_func::IndiFunc::*;
+    use crate::params::indicator::Indicator;
+    use crate::params::indicator_set::IndicatorSet;
     use crate::params::signal_class::SignalClass::*;
+    use test;
 
     #[test]
     fn read_results_xml_test() {
-        let indi_set = IndicatorSet {
-            confirm: Some(Indicator {
+        let indi_set: IndicatorSet = [(
+            Confirm,
+            Indicator {
                 name: "Ash".to_owned(),
                 shift: 0u8,
                 inputs: vec_vec_to_bigdecimal(vec![
@@ -137,9 +145,12 @@ mod xml_test {
                 buffers: None,
                 params: None,
                 class: Preset,
-            }),
-            ..Default::default()
-        };
+            },
+        )]
+        .iter()
+        .cloned()
+        .collect::<HashMap<IndiFunc, Indicator>>()
+        .into();
 
         let rows = read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
         assert_eq!(rows.len(), 663);
@@ -151,8 +162,9 @@ mod xml_test {
     // the output format has changed to directly return a Vec of the given params.
     // no casting into IndicatorSet
     fn xml_results_not_enough_params() {
-        let indi_set = IndicatorSet {
-            confirm: Some(Indicator {
+        let indi_set: IndicatorSet = [(
+            Confirm,
+            Indicator {
                 name: "Ash".to_owned(),
                 shift: 0u8,
                 inputs: vec_vec_to_bigdecimal(vec![
@@ -166,9 +178,12 @@ mod xml_test {
                 buffers: None,
                 params: None,
                 class: Preset,
-            }),
-            ..Default::default()
-        };
+            },
+        )]
+        .iter()
+        .cloned()
+        .collect::<HashMap<IndiFunc, Indicator>>()
+        .into();
         // we are expacting more params in result than there are given
 
         // let result = std::panic::catch_unwind(|| {
@@ -183,8 +198,9 @@ mod xml_test {
 
     #[bench]
     fn bench_read_results_xml(b: &mut test::Bencher) {
-        let indi_set = IndicatorSet {
-            confirm: Some(Indicator {
+        let indi_set: IndicatorSet = [(
+            Confirm,
+            Indicator {
                 name: "Wae".to_owned(),
                 shift: 0u8,
                 inputs: vec_vec_to_bigdecimal(vec![
@@ -197,9 +213,12 @@ mod xml_test {
                 buffers: None,
                 params: None,
                 class: Preset,
-            }),
-            ..Default::default()
-        };
+            },
+        )]
+        .iter()
+        .cloned()
+        .collect::<HashMap<IndiFunc, Indicator>>()
+        .into();
 
         b.iter(|| {
             let rows =

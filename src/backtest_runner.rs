@@ -73,7 +73,7 @@ impl BacktestRunner {
             );
         }
         cmd.arg(format!("/config:{}", "terminal.ini"))
-           .current_dir(&self.common.workdir);
+            .current_dir(&self.common.workdir);
         debug!("running terminal: {:?}", cmd);
 
         let mut child = cmd.spawn().context("Command spawning failed")?;

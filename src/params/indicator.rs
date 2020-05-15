@@ -1,8 +1,8 @@
+use super::signal_class::SignalClass;
 use super::to_param_string::ToParamString;
-use serde::{Deserialize, Serialize};
 use anyhow::{ensure, Context, Result};
 use bigdecimal::BigDecimal;
-use super::signal_class::SignalClass;
+use serde::{Deserialize, Serialize};
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -19,43 +19,19 @@ pub struct Indicator {
 
 impl Indicator {
     pub fn to_param_string_vec(&self) -> Vec<String> {
-        let mut res = vec!["Indicator=".to_string() + &self.name,
-             format!("SignalClass={:?}", self.class),
-             "Shift=".to_string() + &self.shift.to_string(),
+        let mut res = vec![
+            "Indicator=".to_string() + &self.name,
+            format!("SignalClass={:?}", self.class),
+            "Shift=".to_string() + &self.shift.to_string(),
         ];
-        res.extend(self
-            .inputs
-            .iter()
-            .enumerate()
-            .map(|(i, input)| format!("double{}={}", i, input_param_str(input))));
+        res.extend(
+            self.inputs
+                .iter()
+                .enumerate()
+                .map(|(i, input)| format!("double{}={}", i, input_param_str(input))),
+        );
         res
     }
-}
-
-impl Indicator {
-    // maybe implement io::Write instead?
-    // pub fn to_params_config<'a>(&self, use_case: &'a str) -> Result<String> {
-    //     let mut string: String = format!(
-    //         "{use_case}_Indicator={name}\n",
-    //         use_case = use_case,
-    //         name = self.name
-    //     );
-    //     for (i, inp) in self.inputs.iter().enumerate() {
-    //         string.push_str(&format!(
-    //             // TODO remove _Double
-    //             "{use_case}_double{idx}=\
-    //              {input_value}\n",
-    //             use_case = use_case,
-    //             input_value = input_param_str(inp)?,
-    //             idx = i,
-    //         ));
-    //     }
-    //     if self.shift > 0 {
-    //         string.push_str(&format!("{}_Shift={}\n", use_case, self.shift));
-    //     }
-
-    //     Ok(string)
-    // }
 
     pub fn from_file(file: &str) -> Result<Self> {
         let json_file = File::open(Path::new(file))?;
@@ -94,10 +70,7 @@ impl Indicator {
 fn input_param_str(input: &Vec<BigDecimal>) -> String {
     match input.len() {
         1 => format!("{:.2}||0||0||0||N", input[0]),
-        3 => format!(
-            "0||{:.2}||{:.2}||{:.2}||Y",
-            input[0], input[2], input[1]
-        ),
+        3 => format!("0||{:.2}||{:.2}||{:.2}||Y", input[0], input[2], input[1]),
         4 => format!(
             "{:.2}||{:.2}||{:.2}||{:.2}||Y",
             input[0], input[1], input[3], input[2]
@@ -107,12 +80,13 @@ fn input_param_str(input: &Vec<BigDecimal>) -> String {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::path::Path;
     use crate::params::signal_class::SignalClass::*;
+    use crate::params::vec_to_bigdecimal;
+    use crate::params::vec_vec_to_bigdecimal;
+    use std::path::Path;
 
     #[test]
     fn indi_to_param_vec() {
@@ -125,73 +99,101 @@ mod test {
             class: Preset,
         };
 
-        assert_eq!(indi.to_param_string_vec(),
-                   vec!["Indicator=ama",
-                        "SignalClass=Preset",
-                        "Shift=0"].iter().map(|s| s.to_string()).collect::<Vec<String>>());
-
-        // indi.inputs = vec_vec_to_bigdecimal(vec![[3.0]]);
-        // assert_eq!(indi.to_param_string_vec(),
-        //            vec!["Indicator=ama",
-        //                 "SignalClass=Preset",
-        //                 "Shift=0",
-        //                 "double0=double0=3.00||0||0||0||N"
-        //            ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
-
-        // indi.inputs = vec_vec_to_bigdecimal(vec![[3.0, 10., 1.0]]);
-        // assert_eq!(indi.to_param_string_vec(),
-        //            vec!["Indicator=ama",
-        //                 "SignalClass=Preset",
-        //                 "Shift=0",
-        //                 "double0=0||3.00||1.00||10.00||Y",
-        //            ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
-
-        // assert_eq!(
-        //     indi.to_params_config(),
-        //     vec!["Indicator=ama"
-        //          "SignalClass=Preset",
-        //          "Shift=0",
-        //     ]);
+        assert_eq!(
+            indi.to_param_string_vec(),
+            vec!["Indicator=ama", "SignalClass=Preset", "Shift=0"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>()
+        );
 
         indi.shift = 7;
         assert_eq!(
-            indi.to_params_config(),
-            vec!["Indicator=ama",
-                 "SignalClass=Preset",
-                 "Shift=7",
-                   ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
+            indi.to_param_string_vec(),
+            vec!["Indicator=ama", "SignalClass=Preset", "Shift=7",]
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>()
+        );
 
         indi.inputs.push(vec_to_bigdecimal(vec![3.]));
         assert_eq!(
-            indi.to_params_config(),
-            vec!["Indicator=ama",
-                 "SignalClass=Preset",
-                 "double0=3.00||0||0||0||N",
-                 "Shift=7",
-                   ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
-
-        indi.inputs.push(vec_to_bigdecimal(vec![4.]));
-        assert_eq!(
-            indi.to_params_config(),
-            vec!["Indicator=ama",
-                 "SignalClass=Preset",
-                 "double0=3.00||0||0||0||N",
-                 "double1=4.00||0||0||0||N",
-                 "Shift=7",
-                   ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
-
-        indi.inputs.push(vec_to_bigdecimal(vec![10., 200., 0.5]));
-        assert_eq!(
-            indi.to_params_config(),
+            indi.to_param_string_vec(),
             vec![
                 "Indicator=ama",
                 "SignalClass=Preset",
+                "Shift=7",
+                "double0=3.00||0||0||0||N",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+        );
+
+        indi.inputs.push(vec_to_bigdecimal(vec![4.]));
+        assert_eq!(
+            indi.to_param_string_vec(),
+            vec![
+                "Indicator=ama",
+                "SignalClass=Preset",
+                "Shift=7",
+                "double0=3.00||0||0||0||N",
+                "double1=4.00||0||0||0||N",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+        );
+
+        indi.inputs.push(vec_to_bigdecimal(vec![10., 200., 0.5]));
+        assert_eq!(
+            indi.to_param_string_vec(),
+            vec![
+                "Indicator=ama",
+                "SignalClass=Preset",
+                "Shift=7",
                 "double0=3.00||0||0||0||N",
                 "double1=4.00||0||0||0||N",
                 "double2=0||10.00||0.50||200.00||Y",
-                "Shift=7"
-                   ].iter().map(|s| s.to_string()).collect::<Vec<String>>());
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+        );
 
-        indi.inputs.push(vec_to_bigdecimal(vec![10., 0.5]));
+        indi.inputs
+            .push(vec_to_bigdecimal(vec![15., 10., 20., 0.5]));
+        assert_eq!(
+            indi.to_param_string_vec(),
+            vec![
+                "Indicator=ama",
+                "SignalClass=Preset",
+                "Shift=7",
+                "double0=3.00||0||0||0||N",
+                "double1=4.00||0||0||0||N",
+                "double2=0||10.00||0.50||200.00||Y",
+                "double3=15.00||10.00||0.50||20.00||Y",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+        );
+
+        indi.class = ZeroLineCross;
+        assert_eq!(
+            indi.to_param_string_vec(),
+            vec![
+                "Indicator=ama",
+                "SignalClass=ZeroLineCross",
+                "Shift=7",
+                "double0=3.00||0||0||0||N",
+                "double1=4.00||0||0||0||N",
+                "double2=0||10.00||0.50||200.00||Y",
+                "double3=15.00||10.00||0.50||20.00||Y",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+        );
     }
 }

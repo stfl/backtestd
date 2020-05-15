@@ -14,17 +14,21 @@ use serde_json::{self, json};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::str::FromStr;
 
-pub mod signal_class;
 pub mod indi_func;
 pub mod indicator_set;
+pub mod signal_class;
 mod to_config;
 mod to_param_string;
 // mod to_term
 pub mod indicator;
+pub mod indicator_set_files;
 
 use indicator_set::IndicatorSet;
 use signal_class::SignalClass;
 use to_param_string::ToParamString;
+
+use indi_func::IndiFunc;
+use std::collections::HashMap;
 
 const FOREX_PAIRS: &'static [&'static str] = &[
     "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
@@ -32,7 +36,6 @@ const FOREX_PAIRS: &'static [&'static str] = &[
     "EURNZD", "CADCHF", "GBPAUD", "GBPCAD", "GBPNZD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD",
     "CADJPY",
 ];
-
 
 // input from the API
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -44,7 +47,6 @@ pub struct RunParams {
     pub optimize: OptimizeMode,
     pub optimize_crit: OptimizeCrit,
     pub visual: bool,
-    // symbols : &[],
     pub symbols: Vec<String>,
 }
 
@@ -118,7 +120,7 @@ OptimizationCriterion={opti_crit}",
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct RunParamsFile {
     pub name: String,
-    pub indi_set: IndicatorSetFile,
+    pub indi_set: HashMap<IndiFunc, PathBuf>,
     // pub date: (String, String),
     pub date: (DateTime<Utc>, DateTime<Utc>),
     pub backtest_model: BacktestModel,
@@ -150,40 +152,6 @@ impl From<RunParamsFile> for RunParams {
             symbols: s.symbols,
         }
         // )
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct IndicatorSetFile {
-    pub confirm: Option<PathBuf>,
-    pub confirm2: Option<PathBuf>,
-    pub confirm3: Option<PathBuf>,
-    pub exit: Option<PathBuf>,
-    pub cont: Option<PathBuf>,
-    pub baseline: Option<PathBuf>,
-    pub volume: Option<PathBuf>,
-}
-
-impl From<IndicatorSetFile> for IndicatorSet {
-    fn from(s: IndicatorSetFile) -> Self {
-        IndicatorSet {
-            confirm: s.confirm.map(|f| serde_any::from_file(f).unwrap()).into(),
-            confirm2: s.confirm2.map(|f| serde_any::from_file(f).unwrap()).into(),
-            confirm3: s
-                .confirm3
-                .map({ |f| serde_any::from_file(f).unwrap() })
-                .into(),
-            exit: s.exit.map({ |f| serde_any::from_file(f).unwrap() }).into(),
-            cont: s.cont.map({ |f| serde_any::from_file(f).unwrap() }).into(),
-            baseline: s
-                .baseline
-                .map({ |f| serde_any::from_file(f).unwrap() })
-                .into(),
-            volume: s
-                .volume
-                .map({ |f| serde_any::from_file(f).unwrap() })
-                .into(),
-        }
     }
 }
 
@@ -401,9 +369,14 @@ pub fn vec_vec_to_bigdecimal(vec: Vec<Vec<f32>>) -> Vec<Vec<BigDecimal>> {
 
 #[cfg(test)]
 mod test {
+    use super::indi_func::IndiFunc;
+    use super::indi_func::IndiFunc::*;
+    use super::indicator::Indicator;
+    use super::indicator_set::IndicatorSet;
+    use super::signal_class::SignalClass::*;
     use super::*;
+    use std::collections::HashMap;
     use std::path::Path;
-    use crate::params::signal_class::SignalClass::*;
 
     #[test]
     fn to_bigdecimal_test() {
@@ -432,63 +405,6 @@ mod test {
                 ]
             ]
         );
-    }
-
-    #[test]
-    fn indicator_config_test() {
-        let mut indi = Indicator {
-            name: "ama".to_string(),
-            shift: 0,
-            inputs: Vec::new(),
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-        };
-        assert_eq!(
-            indi.to_params_config("Confirm").unwrap(),
-            "Confirm_Indicator=ama\n"
-        );
-
-        indi.shift = 7;
-        assert_eq!(
-            indi.to_params_config("Confirm").unwrap(),
-            "Confirm_Indicator=ama
-Confirm_Shift=7
-"
-        );
-
-        indi.inputs.push(vec_to_bigdecimal(vec![3.]));
-        assert_eq!(
-            indi.to_params_config("Confirm").unwrap(),
-            "Confirm_Indicator=ama
-Confirm_double0=3.00||0||0||0||N
-Confirm_Shift=7
-"
-        );
-
-        indi.inputs.push(vec_to_bigdecimal(vec![4.]));
-        assert_eq!(
-            indi.to_params_config("Confirm").unwrap(),
-            "Confirm_Indicator=ama
-Confirm_double0=3.00||0||0||0||N
-Confirm_double1=4.00||0||0||0||N
-Confirm_Shift=7
-"
-        );
-
-        indi.inputs.push(vec_to_bigdecimal(vec![10., 200., 0.5]));
-        assert_eq!(
-            indi.to_params_config("Baseline").unwrap(),
-            "Baseline_Indicator=ama
-Baseline_double0=3.00||0||0||0||N
-Baseline_double1=4.00||0||0||0||N
-Baseline_double2=0||10.00||0.50||200.00||Y
-Baseline_Shift=7
-"
-        );
-
-        indi.inputs.push(vec_to_bigdecimal(vec![10., 0.5]));
-        assert!(indi.to_params_config("Baseline").is_err());
     }
 
     /*     #[test]
@@ -539,15 +455,7 @@ Baseline_Shift=7
 
         let run = RunParams {
             name: "test".to_string(),
-            indi_set: IndicatorSet {
-                confirm: None,
-                confirm2: None,
-                confirm3: None,
-                exit: None,
-                cont: None,
-                baseline: None,
-                volume: None,
-            },
+            indi_set: IndicatorSet::new(HashMap::new()),
             date: (
                 DateTime::parse_from_rfc3339("2017-08-01T00:00:00-00:00")
                     .unwrap()
@@ -618,6 +526,7 @@ Baseline_Shift=7
      *     assert_eq!(sym_iter.next().unwrap(), "USDJPY");
      * } */
 
+    // TODO
     #[test]
     fn to_terminal_config_test() {
         let common = CommonParams {
@@ -641,50 +550,67 @@ Baseline_Shift=7
 
         let run = RunParams {
             name: "test".to_string(),
-            indi_set: IndicatorSet {
-                confirm: Some(Indicator {
-                    name: "ma".to_string(),
-                    inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
-                    shift: 0,
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-                }),
-                confirm2: Some(Indicator {
-                    name: "ma2".to_string(),
-                    inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
-                    shift: 1,
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-                }),
-                confirm3: None,
-                exit: Some(Indicator {
-                    name: "exitor".to_string(),
-                    inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
-                    shift: 2,
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-                }),
-                cont: None,
-                baseline: Some(Indicator {
-                    name: "Ichy".to_string(),
-                    inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
-                    shift: 0,
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-                }),
-                volume: Some(Indicator {
-                    name: "WAE".to_string(),
-                    inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
-                    shift: 0,
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-                }),
-            },
+            indi_set: [
+                (
+                    Confirm,
+                    Indicator {
+                        name: "ma".to_string(),
+                        shift: 0,
+                        inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
+                        buffers: None,
+                        params: None,
+                        class: Preset,
+                    },
+                ),
+                (
+                    Confirm2,
+                    Indicator {
+                        name: "ma2".to_string(),
+                        inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
+                        shift: 1,
+                        buffers: None,
+                        params: None,
+                        class: Preset,
+                    },
+                ),
+                (
+                    Exit,
+                    Indicator {
+                        name: "exitor".to_string(),
+                        inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
+                        shift: 2,
+                        buffers: None,
+                        params: None,
+                        class: Preset,
+                    },
+                ),
+                (
+                    Baseline,
+                    Indicator {
+                        name: "Ichy".to_string(),
+                        inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
+                        shift: 0,
+                        buffers: None,
+                        params: None,
+                        class: Preset,
+                    },
+                ),
+                (
+                    Volume,
+                    Indicator {
+                        name: "WAE".to_string(),
+                        inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
+                        shift: 0,
+                        buffers: None,
+                        params: None,
+                        class: Preset,
+                    },
+                ),
+            ]
+            .iter()
+            .cloned()
+            .collect::<HashMap<IndiFunc, Indicator>>()
+            .into(),
             date: (
                 DateTime::parse_from_rfc3339("2017-08-01T00:00:00-00:00")
                     .unwrap()
@@ -759,71 +685,87 @@ Report=reports\test.xml"
         };
 
         let j = r#"{"params_file":"expert_params.set",
-                       "wine":false,
-                       "terminal_exe":"C:\\terminal64.exe",
-                       "workdir":"C:\\workdir",
-                       "reports":"reports",
-                       "expert":"expert\\expert.ex5",
-                       "period":"D1",
-                       "login":"",
-                       "use_remote":true,
-                       "use_local":true,
-                       "replace_report":true,
-                       "shutdown_terminal":true,
-                       "deposit":10000,
-                       "currency":"USD",
-                       "leverage":100,
-                       "execution_mode":0}
-                "#;
+                    "wine":false,
+                    "terminal_exe":"C:\\terminal64.exe",
+                    "workdir":"C:\\workdir",
+                    "reports":"reports",
+                    "expert":"expert\\expert.ex5",
+                    "period":"D1",
+                    "login":"",
+                    "use_remote":true,
+                    "use_local":true,
+                    "replace_report":true,
+                    "shutdown_terminal":true,
+                    "deposit":10000,
+                    "currency":"USD",
+                    "leverage":100,
+                    "execution_mode":0}
+                    "#;
         assert_eq!(term_params, serde_json::from_str(j).unwrap());
 
         let run = RunParams {
             name: "bt_run_name".to_string(),
-            indi_set: IndicatorSet {
-                confirm: Some(Indicator {
-                    name: "ma".to_string(),
-                    inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
-                    shift: 0,
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-
-                }),
-                confirm2: Some(Indicator {
-                    name: "ma2".to_string(),
-                    inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
-                    shift: 1,
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-                }),
-                confirm3: None,
-                exit: Some(Indicator {
-                    name: "exitor".to_string(),
-                    inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
-                    shift: 2,
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-                }),
-                cont: None,
-                baseline: Some(Indicator {
-                    name: "Ichy".to_string(),
-                    inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
-                    shift: 0,
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-                }),
-                volume: Some(Indicator {
-                    name: "WAE".to_string(),
-                    inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
-                    shift: 0,
-                    buffers: None,
-                    params: None,
-                    class: Preset,
-                }),
-            },
+            indi_set: [
+                (
+                    Confirm,
+                    Indicator {
+                        name: "ma".to_string(),
+                        shift: 0,
+                        inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
+                        buffers: None,
+                        params: None,
+                        class: Preset,
+                    },
+                ),
+                (
+                    Confirm2,
+                    Indicator {
+                        name: "ma2".to_string(),
+                        inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
+                        shift: 1,
+                        buffers: None,
+                        params: None,
+                        class: Preset,
+                    },
+                ),
+                (
+                    Exit,
+                    Indicator {
+                        name: "exitor".to_string(),
+                        inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
+                        shift: 2,
+                        buffers: None,
+                        params: None,
+                        class: Preset,
+                    },
+                ),
+                (
+                    Baseline,
+                    Indicator {
+                        name: "Ichy".to_string(),
+                        inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
+                        shift: 0,
+                        buffers: None,
+                        params: None,
+                        class: Preset,
+                    },
+                ),
+                (
+                    Volume,
+                    Indicator {
+                        name: "WAE".to_string(),
+                        inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
+                        shift: 0,
+                        buffers: None,
+                        params: None,
+                        class: Preset,
+                    },
+                ),
+            ]
+            .iter()
+            .cloned()
+            .collect::<HashMap<IndiFunc, Indicator>>()
+            .into(),
             date: (
                 DateTime::parse_from_rfc3339("2017-08-01T00:00:00-00:00")
                     .unwrap()
@@ -839,40 +781,79 @@ Report=reports\test.xml"
             symbols: vec!["EURUSD".to_string(), "AUDCAD".into()],
         };
 
-        let run_string = r#"{"name":"bt_run_name",
-            "indi_set":{"confirm":{"name":"ma","inputs":[[1.0],[1.0,100.0,3.0]],"shift":0},
-            "confirm2":{"name":"ma2","inputs":[[1.0],[10.0,200.0,5.0]],"shift":1},
-            "confirm3":null,
-            "exit":{"name":"exitor","inputs":[[14.0,100.0,3.0],[1.0,30.0,2.0]],"shift":2},
-            "cont":null,
-            "baseline":{"name":"Ichy","inputs":[[41.0],[10.0]],"shift":0},
-            "volume":{"name":"WAE","inputs":[[7.0],[222.0]],"shift":0}},
-            "date":["2017-08-01T00:00:00-00:00","2019-08-20T00:00:00-00:00"],
-            "backtest_model":0, "optimize":1,"optimize_crit":6,"visual":false,
-            "symbols":["EURUSD","AUDCAD"]}"#;
+        let run_string = r#"{
+                "name": "bt_run_name",
+                "indi_set": {
+                    "Confirm": {
+                        "name": "ma",
+                        "class": "Preset",
+                        "inputs": [[1.0], [1.0, 100.0, 3.0]],
+                        "shift": 0
+                    },
+                    "Confirm2": {
+                        "name": "ma2",
+                        "class": "Preset",
+                        "inputs": [[1.0], [10.0, 200.0, 5.0]],
+                        "shift": 1
+                    },
+                    "Exit": {
+                        "name": "exitor",
+                        "class": "Preset",
+                        "inputs": [
+                            [14.0, 100.0, 3.0],
+                            [1.0, 30.0, 2.0]
+                        ],
+                        "shift": 2
+                    },
+                    "Baseline": {
+                        "name": "Ichy",
+                        "inputs": [[41.0], [10.0]],
+                        "shift": 0,
+                        "class": "Preset"
+                    },
+                    "Volume": {
+                        "name": "WAE",
+                        "inputs": [[7.0], [222.0]],
+                        "shift": 0,
+                        "class": "Preset"
+                    }
+                },
+                "date": ["2017-08-01T00:00:00-00:00", "2019-08-20T00:00:00-00:00"],
+                "backtest_model": 0,
+                "optimize": 1,
+                "optimize_crit": 6,
+                "visual": false,
+                "symbols": ["EURUSD", "AUDCAD"]
+            }"#;
 
-        assert_eq!(run, serde_json::from_str(run_string).unwrap());
+        let des: RunParams = serde_json::from_str(run_string).unwrap();
+        for (f, i) in run.indi_set.iter() {
+            assert_eq!(des.indi_set.get(f), Some(i));
+        }
+        assert_eq!(run, des);
 
-        let _ = serde_any::to_file("/tmp/confirm.yaml", &run.indi_set.confirm);
-        let _ = serde_any::to_file("/tmp/confirm2.yaml", &run.indi_set.confirm2);
-        let _ = serde_any::to_file("/tmp/baseline.yaml", &run.indi_set.baseline);
-        let _ = serde_any::to_file("/tmp/exit.yaml", &run.indi_set.exit);
-        let _ = serde_any::to_file("/tmp/volume.yaml", &run.indi_set.volume);
+        let _ = serde_any::to_file("/tmp/confirm.yaml", &run.indi_set.get(&Confirm));
+        let _ = serde_any::to_file("/tmp/confirm2.yaml", &run.indi_set.get(&Confirm2));
+        let _ = serde_any::to_file("/tmp/baseline.yaml", &run.indi_set.get(&Baseline));
+        let _ = serde_any::to_file("/tmp/exit.yaml", &run.indi_set.get(&Exit));
+        let _ = serde_any::to_file("/tmp/volume.yaml", &run.indi_set.get(&Volume));
 
         assert_eq!(
-            Some(serde_any::from_file::<Indicator, _>("/tmp/confirm.yaml").unwrap()),
-            run.indi_set.confirm
+            serde_any::from_file::<Indicator, _>("/tmp/confirm.yaml").unwrap(),
+            *run.indi_set.get(&Confirm).unwrap()
         );
 
-        let indi_set = IndicatorSetFile {
-            confirm: Some("/tmp/confirm.yaml".into()),
-            confirm2: Some("/tmp/confirm2.yaml".into()),
-            confirm3: None,
-            exit: Some("/tmp/exit.yaml".into()),
-            cont: None,
-            baseline: Some("/tmp/baseline.yaml".into()),
-            volume: Some("/tmp/volume.yaml".into()),
-        };
+        let indi_set: HashMap<IndiFunc, PathBuf> = [
+            (Confirm, "/tmp/confirm.yaml".into()),
+            (Confirm2, "/tmp/confirm2.yaml".into()),
+            (Exit, "/tmp/exit.yaml".into()),
+            (Baseline, "/tmp/baseline.yaml".into()),
+            (Volume, "/tmp/volume.yaml".into()),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
         assert_eq!(IndicatorSet::from(indi_set.clone()), run.indi_set);
 
         let run_cl = run.clone();

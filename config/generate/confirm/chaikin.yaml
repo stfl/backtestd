@@ -1,7 +1,7 @@
 ---
 name: Chaikin
-name_indi: chaikin
-indi_type: ZeroLineCross
+filename: chaikin
+class: ZeroLineCross
 inputs:
   ## XXX is included: IND_CHAIKIN
 

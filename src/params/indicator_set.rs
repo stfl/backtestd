@@ -96,6 +96,7 @@ mod test {
             Confirm,
             Indicator {
                 name: "ama".to_string(),
+            filename: None,
                 shift: 0,
                 inputs: Vec::new(),
                 buffers: None,
@@ -121,6 +122,7 @@ mod test {
             Baseline,
             Indicator {
                 name: "ma".to_string(),
+            filename: None,
                 shift: 0,
                 inputs: Vec::new(),
                 buffers: None,

@@ -1,7 +1,7 @@
 ---
 name: iTrend_2lx
-name_indi: iTrend
-indi_type: TwoLinesCross
+filename: iTrend
+class: TwoLinesCross
 inputs:
 
 # input ENUM_TIMEFRAMES TimeFrame         = PERIOD_CURRENT; // Time frame

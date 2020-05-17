@@ -1,8 +1,8 @@
 ---
 name: YMA
-name_indi: YGMA
+filename: YGMA
 # use YMA and GMA from the same indi
-indi_type: PriceCross
+class: PriceCross
 inputs:
     # YMA
   - - Int

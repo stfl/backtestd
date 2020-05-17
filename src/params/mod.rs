@@ -555,6 +555,7 @@ mod test {
                     Confirm,
                     Indicator {
                         name: "ma".to_string(),
+            filename: None,
                         shift: 0,
                         inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
                         buffers: None,
@@ -566,6 +567,7 @@ mod test {
                     Confirm2,
                     Indicator {
                         name: "ma2".to_string(),
+            filename: None,
                         inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
                         shift: 1,
                         buffers: None,
@@ -577,6 +579,7 @@ mod test {
                     Exit,
                     Indicator {
                         name: "exitor".to_string(),
+            filename: None,
                         inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
                         shift: 2,
                         buffers: None,
@@ -588,6 +591,7 @@ mod test {
                     Baseline,
                     Indicator {
                         name: "Ichy".to_string(),
+            filename: None,
                         inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
                         shift: 0,
                         buffers: None,
@@ -599,6 +603,7 @@ mod test {
                     Volume,
                     Indicator {
                         name: "WAE".to_string(),
+            filename: None,
                         inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
                         shift: 0,
                         buffers: None,
@@ -710,6 +715,7 @@ Report=reports\test.xml"
                     Confirm,
                     Indicator {
                         name: "ma".to_string(),
+            filename: None,
                         shift: 0,
                         inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
                         buffers: None,
@@ -721,6 +727,7 @@ Report=reports\test.xml"
                     Confirm2,
                     Indicator {
                         name: "ma2".to_string(),
+            filename: None,
                         inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
                         shift: 1,
                         buffers: None,
@@ -732,6 +739,7 @@ Report=reports\test.xml"
                     Exit,
                     Indicator {
                         name: "exitor".to_string(),
+            filename: None,
                         inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
                         shift: 2,
                         buffers: None,
@@ -743,6 +751,7 @@ Report=reports\test.xml"
                     Baseline,
                     Indicator {
                         name: "Ichy".to_string(),
+            filename: None,
                         inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
                         shift: 0,
                         buffers: None,
@@ -754,6 +763,7 @@ Report=reports\test.xml"
                     Volume,
                     Indicator {
                         name: "WAE".to_string(),
+            filename: None,
                         inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
                         shift: 0,
                         buffers: None,

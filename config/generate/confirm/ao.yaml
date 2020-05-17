@@ -1,7 +1,7 @@
 ---
 name: AO
-name_indi: Awesome_oscillator_-_extended
-indi_type: ZeroLineCross
+filename: Awesome_oscillator_-_extended
+class: ZeroLineCross
 inputs:
 # input ENUM_TIMEFRAMES TimeFrame         = PERIOD_CURRENT; // Time frame
   - - Int

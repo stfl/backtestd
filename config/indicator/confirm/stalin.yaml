@@ -1,5 +1,6 @@
 ---
 name: stalin
+class: Preset
 inputs:
 # ENUM_MA_METHOD 
   #   m_MAMethod=MODE_EMA;

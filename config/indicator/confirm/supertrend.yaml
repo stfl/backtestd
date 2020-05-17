@@ -1,5 +1,6 @@
 ---
 name: supertrend
+class: Preset
 inputs:
   # CCI Period = 50
   - - 30.0

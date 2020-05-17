@@ -1,5 +1,6 @@
 ---
 name: sidus
+class: Preset
 inputs:
    # m_FastEMA=18;
   - - 13.0

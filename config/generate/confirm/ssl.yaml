@@ -1,7 +1,7 @@
 ---
 name: Ssl
-name_indi: ssl
-indi_type: Semaphore
+filename: ssl
+class: Semaphore
 inputs:
 # input uint   period=13;           // Moving averages period;
   - - Int

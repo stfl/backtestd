@@ -1,5 +1,6 @@
 ---
 name: bykovtrend
+class: Preset
 inputs:
   # RISK 4
   - - 1.0

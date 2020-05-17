@@ -1,5 +1,6 @@
 ---
 name: Chaikin
+class: Preset
 inputs:
   - - 1.0
     - 8.0

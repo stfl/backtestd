@@ -10,17 +10,26 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
 pub struct Indicator {
     pub name: String,
+    pub filename: Option<String>,
+    pub class: SignalClass,
     pub inputs: Vec<Vec<BigDecimal>>,
-    pub shift: u8,
     pub buffers: Option<Vec<u8>>,
     pub params: Option<Vec<BigDecimal>>,
-    pub class: SignalClass,
+    pub shift: u8,
 }
 
 impl Indicator {
     pub fn to_param_string_vec(&self) -> Vec<String> {
+        use super::signal_class::SignalClass;
         let mut res = vec![
-            "Indicator=".to_string() + &self.name,
+            format!("Indicator={}", match self.class {
+                SignalClass::Preset => &self.name,
+                // _ => self.filename.unwrap_or(self.name)
+                 _ => match &self.filename {
+                    Some(filename) => &filename,
+                    _ => &self.name,
+                }
+            }),
             format!("SignalClass={:?}", self.class),
             "Shift=".to_string() + &self.shift.to_string(),
         ];
@@ -92,6 +101,7 @@ mod test {
     fn indi_to_param_vec() {
         let mut indi = Indicator {
             name: "ama".to_string(),
+            filename: None,
             shift: 0,
             inputs: Vec::new(),
             buffers: None,
@@ -106,6 +116,39 @@ mod test {
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>()
         );
+
+        {
+            // if a filename is set
+            // if class Preset, name needs to be filled
+            let mut indi = indi.clone();
+            indi.filename = Some("ama.ex5".to_string());
+            assert_eq!(
+                indi.to_param_string_vec(),
+                vec!["Indicator=ama", "SignalClass=Preset", "Shift=0"]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>()
+            );
+
+            indi.class = ZeroLineCross;
+            assert_eq!(
+                indi.to_param_string_vec(),
+                vec!["Indicator=ama.ex5", "SignalClass=ZeroLineCross", "Shift=0"]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>()
+            );
+
+            // Panics
+            // indi.filename = None;
+            // assert_eq!(
+            //     indi.to_param_string_vec(),
+            //     vec!["Indicator=ama.ex5", "SignalClass=ZeroLineCross", "Shift=0"]
+            //         .iter()
+            //         .map(|s| s.to_string())
+            //         .collect::<Vec<String>>()
+            // );
+        }
 
         indi.shift = 7;
         assert_eq!(

@@ -21,3 +21,9 @@ pub enum SignalClass {
     SlopeChange,
     TwoLinesSlopeChange,
 }
+
+impl Default for SignalClass {
+    fn default() -> Self {
+        SignalClass::Preset
+    }
+}

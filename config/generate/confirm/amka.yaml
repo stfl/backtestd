@@ -1,7 +1,7 @@
 ---
 name: Amka
-name_indi: amka-indicator
-indi_type: Semaphore
+filename: amka-indicator
+class: Semaphore
 inputs:
 # input int ama_period=9; // Period of AMA
   - - Int

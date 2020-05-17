@@ -1,8 +1,8 @@
 ---
 name: volatility_ratio
-name_indi: Volatility_ratio
+filename: Volatility_ratio
 # without ex5
-indi_type: TwoLevelsCross
+class: TwoLevelsCross
 inputs:
 # input int                inpPeriod = 25;          // Volatility period
   - - Int

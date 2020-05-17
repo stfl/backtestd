@@ -1,7 +1,7 @@
 ---
 name: STC
-name_indi: SchaffTrendCycle
-indi_type: TwoLevelsCross
+filename: SchaffTrendCycle
+class: TwoLevelsCross
 shift: 0
 inputs:
 # //---- Input Parameters

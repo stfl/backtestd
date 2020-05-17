@@ -1,8 +1,8 @@
 ---
 name: Ash
-name_indi: ASH
+filename: ASH
 # without ex5
-indi_type: ZeroLineCross
+class: ZeroLineCross
 # //--- plot ASH
 # #property indicator_label1  "ASH"
 # #property indicator_type1   DRAW_COLOR_HISTOGRAM

@@ -1,7 +1,7 @@
 ---
 name: Aroon_Osci
-name_indi: Aroon_oscillator_1.7
-indi_type: ColorChange
+filename: Aroon_oscillator_1.7
+class: ColorChange
 inputs:
 # input ENUM_TIMEFRAMES TimeFrame       = PERIOD_CURRENT; // Time frame
   - - Int
@@ -83,7 +83,7 @@ buffers:
    # SetIndexBuffer(7,prl  ,INDICATOR_CALCULATIONS);
    # SetIndexBuffer(8,count,INDICATOR_CALCULATIONS);
   - 5
-colors:
+params:
   - 0
   - 1
   - 2

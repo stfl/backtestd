@@ -1,5 +1,6 @@
 ---
 name: nonlagdot
+class: Preset
 inputs:
 # ENUM_APPLIED_PRICE Price=1
   - - 0.0

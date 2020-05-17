@@ -134,6 +134,7 @@ mod xml_test {
             Confirm,
             Indicator {
                 name: "Ash".to_owned(),
+                filename: None,
                 shift: 0u8,
                 inputs: vec_vec_to_bigdecimal(vec![
                     vec![14., 100., 3.],
@@ -166,6 +167,7 @@ mod xml_test {
             Confirm,
             Indicator {
                 name: "Ash".to_owned(),
+                filename: None,
                 shift: 0u8,
                 inputs: vec_vec_to_bigdecimal(vec![
                     vec![14., 100., 3.],
@@ -202,6 +204,7 @@ mod xml_test {
             Confirm,
             Indicator {
                 name: "Wae".to_owned(),
+                filename: None,
                 shift: 0u8,
                 inputs: vec_vec_to_bigdecimal(vec![
                     vec![14., 100., 3.],

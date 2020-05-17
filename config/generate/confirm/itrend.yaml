@@ -1,7 +1,7 @@
 ---
 name: iTrend
-name_indi: iTrend
-indi_type: ColorChange
+filename: iTrend
+class: ColorChange
 inputs:
 
 # input ENUM_TIMEFRAMES TimeFrame         = PERIOD_CURRENT; // Time frame
@@ -60,7 +60,7 @@ buffers:
    # SetIndexBuffer(7,itrendc,INDICATOR_COLOR_INDEX);
    # SetIndexBuffer(8,count  ,INDICATOR_CALCULATIONS);
   - 7
-colors:
+params:
     - 0
     - 1
     - 2

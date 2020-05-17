@@ -1,7 +1,7 @@
 ---
 name: Corr_avg
-name_indi: Corr_average
-indi_type: ColorChange
+filename: Corr_average
+class: ColorChange
 inputs:
 
 # input ENUM_TIMEFRAMES TimeFrame        = PERIOD_CURRENT; // Time frame
@@ -78,7 +78,7 @@ buffers:
    # SetIndexBuffer(6,valc ,INDICATOR_COLOR_INDEX);
    # SetIndexBuffer(7,count,INDICATOR_CALCULATIONS);
   - 6
-colors:
+params:
   - 0
   - 1
   - 2

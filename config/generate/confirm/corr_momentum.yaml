@@ -1,7 +1,7 @@
 ---
 name: Corr_momentum
-name_indi: Corr_momentum
-indi_type: ColorChange
+filename: Corr_momentum
+class: ColorChange
 inputs:
 # input int        MomPeriod        = 32;          // Momentum period
   - - Int
@@ -63,7 +63,7 @@ buffers:
    # SetIndexBuffer(8,corc   ,INDICATOR_COLOR_INDEX);
    # SetIndexBuffer(9,prices ,INDICATOR_CALCULATIONS);
   - 8
-colors:
+params:
   - 0
   - 1
   - 2

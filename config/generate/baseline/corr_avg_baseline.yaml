@@ -1,7 +1,7 @@
 ---
 name: Corr_avg_baseline
-name_indi: Corr_average
-indi_type: PriceCross
+filename: Corr_average
+class: PriceCross
 inputs:
 
 # input ENUM_TIMEFRAMES TimeFrame        = PERIOD_CURRENT; // Time frame

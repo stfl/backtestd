@@ -1,5 +1,6 @@
 ---
 name: tct
+class: Preset
 inputs:
   # Period
   - - 5.0

@@ -1,5 +1,6 @@
 ---
 name: pricechannel_stop
+class: Preset
 inputs:
   # Channel Period 5
   - - 3.0

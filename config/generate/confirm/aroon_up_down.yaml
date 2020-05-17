@@ -1,7 +1,7 @@
 ---
 name: Aroon
-name_indi: Aroon_Up_Down
-indi_type: TwoLinesCross
+filename: Aroon_Up_Down
+class: TwoLinesCross
 inputs:
 # input int AroonPeriod = 14;
   - - Int

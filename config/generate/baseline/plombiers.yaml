@@ -1,7 +1,7 @@
 ---
 name: Plombiers
-name_indi: plombiers-indicator
-indi_type: PriceCrossInverted
+filename: plombiers-indicator
+class: PriceCrossInverted
 inputs:
 # input int  bars_IN = 145;   // data length
   - - Int

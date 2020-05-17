@@ -1,5 +1,6 @@
 ---
 name: karacatica
+class: Preset
 inputs:
    # ATR Period 70
   - - 40.0

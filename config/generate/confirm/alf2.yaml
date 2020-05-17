@@ -1,7 +1,7 @@
 ---
 name: ALF2
-name_indi: Adaptive_Laguerre_filter_2
-indi_type: ColorChange
+filename: Adaptive_Laguerre_filter_2
+class: ColorChange
 inputs:
 # input ENUM_TIMEFRAMES TimeFrame       = PERIOD_CURRENT; // Time frame
   - - Int
@@ -41,7 +41,7 @@ buffers:
 # SetIndexBuffer(1,lagg1c,INDICATOR_COLOR_INDEX);
 # SetIndexBuffer(2,count ,INDICATOR_CALCULATIONS);
   - 1
-colors:
+params:
   - 0
   - 1
   - 2

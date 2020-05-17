@@ -1,7 +1,7 @@
 ---
 name: Rex
-name_indi: Rex
-indi_type: TwoLinesCross
+filename: Rex
+class: TwoLinesCross
 inputs:
 # input uint           InpPeriod      =  14;         // Rex period
   - - Int

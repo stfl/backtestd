@@ -30,14 +30,14 @@ impl Indicator {
                     _ => &self.name,
                 }
             }),
-            format!("SignalClass={:?}", self.class),
+            format!("SignalClass={}", self.class as u8),
             "Shift=".to_string() + &self.shift.to_string(),
         ];
         res.extend(
             self.inputs
                 .iter()
                 .enumerate()
-                .map(|(i, input)| format!("double{}={}", i, input_param_str(input))),
+                .map(|(i, input)| format!("input{}={}", i, input_param_str(input))),
         );
         res
     }
@@ -112,7 +112,7 @@ mod test {
 
         assert_eq!(
             indi.to_param_string_vec(),
-            vec!["Indicator=ama", "SignalClass=Preset", "Shift=0"]
+            vec!["Indicator=ama", "SignalClass=0", "Shift=0"]
                 .iter()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>()
@@ -125,7 +125,7 @@ mod test {
             indi.filename = Some("ama.ex5".to_string());
             assert_eq!(
                 indi.to_param_string_vec(),
-                vec!["Indicator=ama", "SignalClass=Preset", "Shift=0"]
+                vec!["Indicator=ama", "SignalClass=0", "Shift=0"]
                     .iter()
                     .map(|s| s.to_string())
                     .collect::<Vec<String>>()
@@ -134,7 +134,7 @@ mod test {
             indi.class = ZeroLineCross;
             assert_eq!(
                 indi.to_param_string_vec(),
-                vec!["Indicator=ama.ex5", "SignalClass=ZeroLineCross", "Shift=0"]
+                vec!["Indicator=ama.ex5", "SignalClass=1", "Shift=0"]
                     .iter()
                     .map(|s| s.to_string())
                     .collect::<Vec<String>>()
@@ -154,7 +154,7 @@ mod test {
         indi.shift = 7;
         assert_eq!(
             indi.to_param_string_vec(),
-            vec!["Indicator=ama", "SignalClass=Preset", "Shift=7",]
+            vec!["Indicator=ama", "SignalClass=0", "Shift=7",]
                 .iter()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>()
@@ -165,9 +165,9 @@ mod test {
             indi.to_param_string_vec(),
             vec![
                 "Indicator=ama",
-                "SignalClass=Preset",
+                "SignalClass=0",
                 "Shift=7",
-                "double0=3.00||0||0||0||N",
+                "input0=3.00||0||0||0||N",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -179,10 +179,10 @@ mod test {
             indi.to_param_string_vec(),
             vec![
                 "Indicator=ama",
-                "SignalClass=Preset",
+                "SignalClass=0",
                 "Shift=7",
-                "double0=3.00||0||0||0||N",
-                "double1=4.00||0||0||0||N",
+                "input0=3.00||0||0||0||N",
+                "input1=4.00||0||0||0||N",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -194,11 +194,11 @@ mod test {
             indi.to_param_string_vec(),
             vec![
                 "Indicator=ama",
-                "SignalClass=Preset",
+                "SignalClass=0",
                 "Shift=7",
-                "double0=3.00||0||0||0||N",
-                "double1=4.00||0||0||0||N",
-                "double2=0||10.00||0.50||200.00||Y",
+                "input0=3.00||0||0||0||N",
+                "input1=4.00||0||0||0||N",
+                "input2=0||10.00||0.50||200.00||Y",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -211,12 +211,12 @@ mod test {
             indi.to_param_string_vec(),
             vec![
                 "Indicator=ama",
-                "SignalClass=Preset",
+                "SignalClass=0",
                 "Shift=7",
-                "double0=3.00||0||0||0||N",
-                "double1=4.00||0||0||0||N",
-                "double2=0||10.00||0.50||200.00||Y",
-                "double3=15.00||10.00||0.50||20.00||Y",
+                "input0=3.00||0||0||0||N",
+                "input1=4.00||0||0||0||N",
+                "input2=0||10.00||0.50||200.00||Y",
+                "input3=15.00||10.00||0.50||20.00||Y",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -228,12 +228,12 @@ mod test {
             indi.to_param_string_vec(),
             vec![
                 "Indicator=ama",
-                "SignalClass=ZeroLineCross",
+                "SignalClass=1",
                 "Shift=7",
-                "double0=3.00||0||0||0||N",
-                "double1=4.00||0||0||0||N",
-                "double2=0||10.00||0.50||200.00||Y",
-                "double3=15.00||10.00||0.50||20.00||Y",
+                "input0=3.00||0||0||0||N",
+                "input1=4.00||0||0||0||N",
+                "input2=0||10.00||0.50||200.00||Y",
+                "input3=15.00||10.00||0.50||20.00||Y",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -248,6 +248,5 @@ mod test {
             // println!("{:#?}", indi);
             assert!(indi.is_ok());
         }
-
     }
 }

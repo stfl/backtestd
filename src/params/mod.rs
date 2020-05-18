@@ -18,7 +18,7 @@ pub mod indi_func;
 pub mod indicator_set;
 pub mod signal_class;
 mod to_config;
-mod to_param_string;
+pub mod to_param_string;
 // mod to_term
 pub mod indicator;
 pub mod indicator_set_files;
@@ -50,19 +50,37 @@ pub struct RunParams {
     pub symbols: Vec<String>,
 }
 
-impl RunParams {
-    pub fn to_params_config(&self) -> Result<String> {
-        let mut string = self.indi_set.to_param_string();
-        for (i, symbol) in self.symbols.iter().enumerate() {
-            string.push_str(&format!(
-                "Expert_symbol{idx}={symbol}\n",
-                symbol = symbol,
-                idx = i,
-            ));
-        }
+impl ToParamString for RunParams {
+    fn to_param_string(&self) -> String {
+        let mut string = self.to_param_string_vec().join("\n");
         // string.push_str(&format!("Expert_Symbols={}", self.symbols.join(" ")));
         debug!("Params config for terminal:\n{}", string);
-        return Ok(string);
+        return string;
+    }
+}
+
+impl RunParams {
+    pub fn to_param_string_vec(&self) -> Vec<String> {
+        let mut strings = self.indi_set.to_param_string_vec();
+        strings.extend(
+                         self.symbols
+                             .iter()
+                             .enumerate()
+                             .map(|(i, symbol)| format!(
+                                 "Expert_symbol{idx}={symbol}",
+                                 symbol = symbol,
+                                 idx = i)));
+        strings
+        // for (i, symbol) in self.symbols.iter().enumerate() {
+        //     string.push_str(&format!(
+        //         "Expert_symbol{idx}={symbol}\n",
+        //         symbol = symbol,
+        //         idx = i,
+        //     ));
+        // }
+        // string.push_str(&format!("Expert_Symbols={}", self.symbols.join(" ")));
+        // debug!("Params config for terminal:\n{}", string);
+        // return string;
     }
 
     fn to_config(&self) -> String {

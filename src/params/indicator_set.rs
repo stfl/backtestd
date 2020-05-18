@@ -31,7 +31,7 @@ impl ToParamString for IndicatorSet {
 }
 
 impl IndicatorSet {
-    fn to_param_string_vec(&self) -> Vec<String> {
+    pub fn to_param_string_vec(&self) -> Vec<String> {
         use super::signal_class::SignalClass::*;
 
         self.clone()

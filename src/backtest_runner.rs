@@ -39,9 +39,10 @@ impl BacktestRunner {
     }
 
     fn write_indi_params(&self) -> Result<()> {
+        use crate::params::to_param_string::ToParamString;
         debug!("writing {:?}", self.common.params_path());
         let mut file = File::create(self.common.params_path())?;
-        file.write_all(self.run.to_params_config()?.as_bytes())?;
+        file.write_all(self.run.to_param_string().as_bytes())?;
         Ok(())
     }
 

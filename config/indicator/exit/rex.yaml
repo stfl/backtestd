@@ -1,0 +1,30 @@
+---
+name: Rex
+filename: Rex
+class: TwoLinesCross
+inputs:
+# input uint           InpPeriod      =  14;         // Rex period
+    - - 14.0
+      - 4.0
+      - 30.0
+      - 2.0
+# input ENUM_MA_METHOD InpMethod      =  MODE_SMA;   // Rex method
+    - - 0.0
+      - 0.0
+      - 3.0
+      - 1.0
+# input uint           InpPeriodSig   =  14;         // Signal period
+    - - 14.0
+      - 4.0
+      - 30.0
+      - 2.0
+# input ENUM_MA_METHOD InpMethodSig   =  MODE_SMA;   // Signal method
+    - - 0.0
+      - 0.0
+      - 3.0
+      - 1.0
+buffers:
+  - 0  # up buffer
+  - 1  # down buffer
+shift: 0
+

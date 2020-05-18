@@ -1,0 +1,21 @@
+---
+name: Adxvma
+filename: adxvma_1_1
+class: SlopeChange
+inputs:
+    # input int      AdxVmaPeriod = 14;       // Calculation period
+    - - 14.0
+      - 4.0
+      - 20.0
+      - 2.0
+# input enPrices        Price           = pr_median;      // Price
+    - - 0.0
+      - 0.0
+      - 21.0
+      - 1.0
+buffers:
+   # SetIndexBuffer(0,MaBuffer,INDICATOR_DATA);
+   # SetIndexBuffer(1,ColorBuffer,INDICATOR_COLOR_INDEX);
+  - 0
+shift: 0
+

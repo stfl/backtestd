@@ -1,5 +1,6 @@
 ---
 name: wae
+class: Preset
 inputs:
   # Fast_MA=20
   - - 15.0

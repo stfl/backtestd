@@ -257,3 +257,4 @@ async fn backtest_run(
 //     // generate_signal(sig, );
 //     Ok(HttpResponse::Ok().json(Indicator::from(&sig)))
 // }
+//

@@ -96,6 +96,7 @@ mod test {
     use crate::params::vec_to_bigdecimal;
     use crate::params::vec_vec_to_bigdecimal;
     use std::path::Path;
+    use glob::glob;
 
     #[test]
     fn indi_to_param_vec() {
@@ -238,5 +239,15 @@ mod test {
             .map(|s| s.to_string())
             .collect::<Vec<String>>()
         );
+    }
+
+    #[test]
+    fn load_indicators_test() {
+        for entry in glob("config/indicator/*/*").unwrap().filter_map(Result::ok) {
+            let indi = serde_any::from_file::<Indicator, _>(entry);
+            // println!("{:#?}", indi);
+            assert!(indi.is_ok());
+        }
+
     }
 }

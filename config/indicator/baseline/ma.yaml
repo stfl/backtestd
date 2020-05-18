@@ -1,5 +1,6 @@
 ---
 name: ma
+class: Preset
 inputs:
    # MA
   - - 18.0

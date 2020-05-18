@@ -1,0 +1,61 @@
+---
+name: EO
+filename: Elliot_oscillator
+class: ColorChange
+inputs:
+
+# input ENUM_TIMEFRAMES TimeFrame       = PERIOD_CURRENT; // Time frame
+    - - 0.0  # current
+      # - 1.0  # M1
+      - 5.0  # M5
+      - 19.0 # D1
+      # - 21.0 # MN1
+      - 2.0    # 5m 10m 15m 30m 2h 4h 8h 1D
+# input int             FastPeriod      = 5;              // Fast period
+    - - 5.0
+      - 3.0
+      - 20.0
+      - 2.0
+# input int             SlowPeriod      = 34;             // Slow period
+    - - 34.0
+      - 22.0
+      - 46.0
+      - 2.0
+# input enMaTypes       MaMethod        = ma_sma;         // Average method
+    - - 0.0
+      - 0.0
+      - 3.0
+      - 1.0
+# input enPrices        Price           = pr_median;      // Price
+    - - 0.0
+      - 0.0
+      - 21.0
+      - 1.0
+# input enColorOn       ColorOn         = cc_onLevel;     // Color change
+    - - 0.0
+      - 0.0
+      - 2.0
+      - 1.0
+# input bool            AlertsOn        = false;          // Turn alerts on?
+# input bool            AlertsOnCurrent = true;           // Alert on current bar?
+# input bool            AlertsMessage   = true;           // Display messageas on alerts?
+# input bool            AlertsSound     = false;          // Play sound on alerts?
+# input bool            AlertsEmail     = false;          // Send email on alerts?
+# input bool            AlertsNotify    = false;          // Send push notification on alerts?
+# input bool            Interpolate     = true;           // Interpolate mtf data ?
+buffers:
+       # SetIndexBuffer(0,fill1  ,INDICATOR_DATA);
+   # SetIndexBuffer(1,fill2  ,INDICATOR_DATA);
+   # SetIndexBuffer(2,levelUp,INDICATOR_DATA);
+   # SetIndexBuffer(3,levelMi,INDICATOR_DATA);
+   # SetIndexBuffer(4,levelDn,INDICATOR_DATA);
+   # SetIndexBuffer(5,val    ,INDICATOR_DATA);
+   # SetIndexBuffer(6,valc   ,INDICATOR_COLOR_INDEX);
+   # SetIndexBuffer(7,count  ,INDICATOR_CALCULATIONS);
+  - 6
+params:
+  - 0
+  - 1
+  - 2
+shift: 0
+

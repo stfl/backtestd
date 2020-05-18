@@ -1,5 +1,6 @@
 ---
 name: kijunsen
+class: Preset
 inputs:
    # Tenken-Sen
   - - 9.0

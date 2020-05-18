@@ -1,0 +1,28 @@
+---
+name: COG
+filename: center-of-gravity-extended-indicator
+class: ColorChange
+inputs:
+# Period
+    - - 32.0
+      - 20.0
+      - 45.0
+      - 2.0
+# Price
+    - - 4.0
+      - 0.0
+      - 6.0
+      - 1.0
+# color change
+    - - 0.0
+      - 0.0
+      - 3.0
+      - 1.0
+buffers:
+  - 1
+params:
+  - 0
+  - 1
+  - 2
+shift: 0
+

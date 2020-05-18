@@ -1,0 +1,15 @@
+---
+name: Aroon
+filename: Aroon_Up_Down
+class: TwoLinesCross
+inputs:
+# input int AroonPeriod = 14;
+    - - 14.0
+      - 4.0
+      - 30.0
+      - 2.0
+buffers:
+  - 0  # up buffer
+  - 1  # down buffer
+shift: 0
+

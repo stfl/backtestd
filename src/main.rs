@@ -202,7 +202,9 @@ async fn main() -> std::io::Result<()> {
         let runner = BacktestRunner::new(run, &config);
         runner.prepare().expect("prepare failed");
         runner.run().expect("run failed");
-        runner.convert_results_to_csv().expect("convert to csv failed");
+        runner
+            .convert_results_to_csv()
+            .expect("convert to csv failed");
         if matches.value_of("CLEANUP").is_some() {
             runner.cleanup().expect("cleanup failed");
         }
@@ -239,7 +241,9 @@ async fn backtest_run(
     runner.prepare().map_err(|e| ErrorInternalServerError(e))?;
     runner.run().map_err(|e| ErrorInternalServerError(e))?;
     Ok(HttpResponse::Ok().json(
-        runner.read_results().map_err(|e| ErrorInternalServerError(e))?
+        runner
+            .read_results()
+            .map_err(|e| ErrorInternalServerError(e))?,
     ))
 }
 

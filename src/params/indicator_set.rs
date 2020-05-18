@@ -96,7 +96,7 @@ mod test {
             Confirm,
             Indicator {
                 name: "ama".to_string(),
-            filename: None,
+                filename: None,
                 shift: 0,
                 inputs: Vec::new(),
                 buffers: None,
@@ -112,7 +112,7 @@ mod test {
         assert_eq!(
             vec![
                 "Confirm_Indicator=ama",
-                "Confirm_SignalClass=Preset",
+                "Confirm_SignalClass=0",
                 "Confirm_Shift=0"
             ],
             set.to_param_string_vec()
@@ -122,7 +122,7 @@ mod test {
             Baseline,
             Indicator {
                 name: "ma".to_string(),
-            filename: None,
+                filename: None,
                 shift: 0,
                 inputs: Vec::new(),
                 buffers: None,
@@ -133,10 +133,10 @@ mod test {
         assert_eq!(
             vec![
                 "Confirm_Indicator=ama",
-                "Confirm_SignalClass=Preset",
+                "Confirm_SignalClass=0",
                 "Confirm_Shift=0",
                 "Baseline_Indicator=ma",
-                "Baseline_SignalClass=Preset",
+                "Baseline_SignalClass=0",
                 "Baseline_Shift=0"
             ]
             .sort(),

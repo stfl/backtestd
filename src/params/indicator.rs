@@ -22,14 +22,17 @@ impl Indicator {
     pub fn to_param_string_vec(&self) -> Vec<String> {
         use super::signal_class::SignalClass;
         let mut res = vec![
-            format!("Indicator={}", match self.class {
-                SignalClass::Preset => &self.name,
-                // _ => self.filename.unwrap_or(self.name)
-                 _ => match &self.filename {
-                    Some(filename) => &filename,
-                    _ => &self.name,
+            format!(
+                "Indicator={}",
+                match self.class {
+                    SignalClass::Preset => &self.name,
+                    // _ => self.filename.unwrap_or(self.name)
+                    _ => match &self.filename {
+                        Some(filename) => &filename,
+                        _ => &self.name,
+                    },
                 }
-            }),
+            ),
             format!("SignalClass={}", self.class as u8),
             "Shift=".to_string() + &self.shift.to_string(),
         ];
@@ -39,6 +42,22 @@ impl Indicator {
                 .enumerate()
                 .map(|(i, input)| format!("input{}={}", i, input_param_str(input))),
         );
+        if let Some(buffers) = &self.buffers {
+            res.extend(
+                buffers
+                    .iter()
+                    .enumerate()
+                    .map(|(i, buf)| format!("buffer{}={}", i, buf)),
+            );
+        }
+        if let Some(params) = &self.params {
+            res.extend(
+                params
+                    .iter()
+                    .enumerate()
+                    .map(|(i, param)| format!("param{}={:.2}", i, param)),
+            );
+        }
         res
     }
 
@@ -95,8 +114,8 @@ mod test {
     use crate::params::signal_class::SignalClass::*;
     use crate::params::vec_to_bigdecimal;
     use crate::params::vec_vec_to_bigdecimal;
-    use std::path::Path;
     use glob::glob;
+    use std::path::Path;
 
     #[test]
     fn indi_to_param_vec() {
@@ -149,6 +168,45 @@ mod test {
             //         .map(|s| s.to_string())
             //         .collect::<Vec<String>>()
             // );
+        }
+
+        {
+            let mut indi = indi.clone();
+            indi.buffers = Some(vec![1u8]);
+            assert_eq!(
+                indi.to_param_string_vec(),
+                vec!["Indicator=ama", "SignalClass=0", "Shift=0", "buffer0=1"]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>()
+            );
+        }
+
+        {
+            let mut indi = indi.clone();
+            indi.params = Some(vec_to_bigdecimal(vec![1.]));
+            assert_eq!(
+                indi.to_param_string_vec(),
+                vec!["Indicator=ama", "SignalClass=0", "Shift=0", "param0=1.00",]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>()
+            );
+
+            indi.params = Some(vec_to_bigdecimal(vec![1., 4.55]));
+            assert_eq!(
+                indi.to_param_string_vec(),
+                vec![
+                    "Indicator=ama",
+                    "SignalClass=0",
+                    "Shift=0",
+                    "param0=1.00",
+                    "param1=4.55",
+                ]
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>()
+            );
         }
 
         indi.shift = 7;

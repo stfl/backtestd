@@ -1,6 +1,6 @@
 use super::params::*;
-use crate::results::ResultRow;
 use crate::results::xml_reader::*;
+use crate::results::ResultRow;
 
 use std::fs::{self, File};
 use std::future::Future;
@@ -149,7 +149,8 @@ impl BacktestRunner {
         read_results_xml_to_csv(
             &self.run.indi_set,
             &reports_path,
-            &reports_path.with_extension("csv"))
+            &reports_path.with_extension("csv"),
+        )
     }
 
     pub fn cleanup(&self) -> Result<()> {

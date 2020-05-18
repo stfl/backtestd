@@ -51,8 +51,9 @@ mod params;
 use params::*;
 // mod signal_generator;
 // use signal_generator::*;
-mod xml_reader;
-use xml_reader::*;
+mod results;
+
+use results::xml_reader::*;
 
 #[actix_rt::main]
 // async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -108,7 +109,7 @@ async fn main() -> std::io::Result<()> {
         (@subcommand run =>
             (about: "run a backtest")
             (@arg INPUT: +required "yaml file the specifies the run params")
-            (@arg KEEP: -k --("keep-reports") "keep the xml reports")
+            (@arg CLEANUP: -c --cleanup "cleanup files after running the backtest")
         )
         // (@subcommand gen =>
         //     (about: "generate an indicator signal")
@@ -199,8 +200,12 @@ async fn main() -> std::io::Result<()> {
             .into();
         debug!("run: {:?}", run);
         let runner = BacktestRunner::new(run, &config);
-        let _ = runner.run_backtest(matches.is_present("KEEP"));
-        // .expect("running backtest failed");
+        runner.prepare().expect("prepare failed");
+        runner.run().expect("run failed");
+        runner.convert_results_to_csv().expect("convert to csv failed");
+        if matches.value_of("CLEANUP").is_some() {
+            runner.cleanup().expect("cleanup failed");
+        }
         return Ok(());
     }
 
@@ -230,10 +235,11 @@ async fn backtest_run(
     let run = data.into_inner();
     let config = config.into_inner();
     info!("running backtest with common: {:?}\nrun:{:?}", config, run);
+    let runner = BacktestRunner::new(run, &config);
+    runner.prepare().map_err(|e| ErrorInternalServerError(e))?;
+    runner.run().map_err(|e| ErrorInternalServerError(e))?;
     Ok(HttpResponse::Ok().json(
-        BacktestRunner::new(run, &config)
-            .run_backtest(false)
-            .map_err(|e| ErrorInternalServerError(e))?,
+        runner.read_results().map_err(|e| ErrorInternalServerError(e))?
     ))
 }
 

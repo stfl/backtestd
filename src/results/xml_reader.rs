@@ -2,48 +2,22 @@ use std::{
     fs, io,
     path::{Path, PathBuf},
 };
-// use std::string::String::from_utf8_lossy;
 use std::borrow::Cow;
-use std::collections::{BTreeMap, HashMap};
 
-use super::params::indicator_set::IndicatorSet;
-use super::params::*;
+use crate::params::indicator_set::IndicatorSet;
+use crate::params::*;
+
+use super::ResultRow;
 
 use anyhow::{Context, Result};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde_derive;
 
-#[derive(Debug, Deserialize, PartialEq)]
-struct Row {
-    pass: u32,
-    result: f32,
-    profit: f32,
-    expected_payoff: f32,
-    profit_factor: f32,
-    recovery_factor: f32,
-    sharpe_ratio: f32,
-    custom_result: f32,
-    equity_dd: f32,
-    trades: u32,
-    input_params: Vec<f32>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct BacktestResult {
-    // indi_set: IndicatorSet,
-    params: Vec<String>,
-    profit: f32,
-    result: f32,
-    trades: u32,
-}
-
-// pub struct ResultMap<IndicatorSet, BacktestResult>
-
 pub fn read_results_xml(
     input_indi_set: &IndicatorSet,
     results_file: PathBuf,
-) -> Result<Vec<BacktestResult>> {
+) -> Result<Vec<ResultRow>> {
     debug!("reading results from {:?}", results_file);
     let mut report_reader = Reader::from_file(results_file.as_path())?;
     report_reader.trim_text(true);
@@ -68,21 +42,37 @@ pub fn read_results_xml(
                     b"Row" => {
                         if count > 1 {
                             // ignore the header row
-                            rows.push(BacktestResult {
-                                /* indi_set: input_indi_set.parse_result_set(
-                                 *     txt[10..]
-                                 *         .iter()
-                                 *         .map(|s| s.parse().expect("Parsing Numeric input failed"))
-                                 *         .collect(),
-                                 * ), */
+                            rows.push(ResultRow {
+                                pass: txt[0].parse().context("Parsing Numeric failed")?,
+                                result: txt[1].parse().context("Parsing Numeric failed")?,
+                                profit: txt[2].parse().context("Parsing Numeric failed")?,
+                                expected_payoff:  txt[3].parse().context("Parsing Numeric failed")?,
+                                profit_factor: txt[4].parse().context("Parsing Numeric failed")?,
+                                recovery_factor: txt[5].parse().context("Parsing Numeric failed")?,
+                                sharpe_ratio: txt[6].parse().context("Parsing Numeric failed")?,
+                                custom: txt[7].parse().context("Parsing Numeric failed")?,
+                                equity_dd: txt[8].parse().context("Parsing Numeric failed")?,
+                                trades: txt[9].parse().context("Parsing Numeric failed")?,
                                 params: txt[10..]
                                     .iter()
                                     .map(|s| s.parse().expect("Parsing Numeric input failed"))
                                     .collect(),
-                                profit: txt[2].parse().context("Parsing Numeric failed")?,
-                                result: txt[7].parse().context("Parsing Numeric failed")?,
-                                trades: txt[9].parse().context("Parsing Numeric failed")?,
                             })
+                            // rows.push(BacktestResult {
+                            //     /* indi_set: input_indi_set.parse_result_set(
+                            //      *     txt[10..]
+                            //      *         .iter()
+                            //      *         .map(|s| s.parse().expect("Parsing Numeric input failed"))
+                            //      *         .collect(),
+                            //      * ), */
+                            //     params: txt[10..]
+                            //         .iter()
+                            //         .map(|s| s.parse().expect("Parsing Numeric input failed"))
+                            //         .collect(),
+                            //     profit: txt[2].parse().context("Parsing Numeric failed")?,
+                            //     result: txt[7].parse().context("Parsing Numeric failed")?,
+                            //     trades: txt[9].parse().context("Parsing Numeric failed")?,
+                            // })
                         }
                     }
                     _ => (),
@@ -127,6 +117,7 @@ mod xml_test {
     use crate::params::indicator_set::IndicatorSet;
     use crate::params::signal_class::SignalClass::*;
     use test;
+    use std::collections::{BTreeMap, HashMap};
 
     #[test]
     fn read_results_xml_test() {
@@ -229,4 +220,47 @@ mod xml_test {
             assert_eq!(rows.len(), 663)
         });
     }
+}
+
+pub fn read_results_xml_to_csv(
+    input_indi_set: &IndicatorSet,
+    results_file: &Path,
+    csv_file: &Path,
+) -> Result<i32> {
+    let mut report_reader = Reader::from_file(results_file)?;
+    report_reader.trim_text(true);
+    let mut csv_writer = csv::Writer::from_path(csv_file)?;
+
+    let mut count = 0;
+    let mut buf = Vec::new();
+    let mut txt = Vec::<String>::new();
+
+    loop {
+        match report_reader.read_event(&mut buf) {
+            Ok(Event::Start(ref e)) => {
+                match e.local_name() {
+                    b"Row" => {
+                        count += 1;
+                        txt.clear(); // delete the values but keep the capacity
+                    }
+                    _ => (),
+                }
+            }
+            Ok(Event::End(ref e)) => {
+                match e.local_name() {
+                    b"Row" => {
+                        csv_writer.write_record(&txt)?;
+                    }
+                    _ => (),
+                }
+            }
+            Ok(Event::Text(e)) => txt.push(e.unescape_and_decode(&report_reader)?),
+            Ok(Event::Eof) => break,
+            _ => (),
+        }
+        buf.clear();
+    }
+
+    debug!("read {} result rows\nfrom {:?}\ninto {:?}", count, results_file, csv_file);
+    Ok(count)
 }

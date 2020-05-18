@@ -1,6 +1,6 @@
 use super::params::*;
-use super::xml_reader;
-use super::xml_reader::*;
+use crate::results::ResultRow;
+use crate::results::xml_reader::*;
 
 use std::fs::{self, File};
 use std::future::Future;
@@ -53,7 +53,7 @@ impl BacktestRunner {
         Ok(())
     }
 
-    fn run_terminal(&self) -> Result<ExitStatus> {
+    pub fn run(&self) -> Result<ExitStatus> {
         let mut cmd: Command;
         if self.common.wine {
             cmd = Command::new("wine");
@@ -86,22 +86,12 @@ impl BacktestRunner {
         ret
     }
 
-    pub fn run_backtest(&self, keep_reports: bool) -> Result<Vec<BacktestResult>> {
+    pub fn prepare(&self) -> Result<()> {
         self.write_indi_params()?;
         fs::create_dir_all(get_reports_dir(&self.common, &self.run)?)?;
         self.write_terminal_config()?;
         let _ = self.delete_terminal_log();
-        self.run_terminal()?;
-        let _ = self.save_terminal_log();
-        let results = self.collect_report()?;
-
-        if !keep_reports {
-            // self.delete_report()?;
-            // self.push_results_to_database().context(DbError)?;
-            // TODO cannot delete if not empty
-            // fs::remove_dir(get_reports_dir(&self.common, &self.run)?)?;
-        }
-        Ok(results)
+        Ok(())
     }
 
     fn delete_terminal_log(&self) -> Result<()> {
@@ -141,7 +131,8 @@ impl BacktestRunner {
         Ok(())
     }
 
-    fn collect_report(&self) -> Result<Vec<BacktestResult>> {
+    pub fn read_results(&self) -> Result<Vec<ResultRow>> {
+        let _ = self.save_terminal_log();
         let results = read_results_xml(
             &self.run.indi_set,
             get_reports_path(&self.common, &self.run)?,
@@ -151,9 +142,20 @@ impl BacktestRunner {
         Ok(results)
     }
 
-    /* fn push_results_to_database(&self) -> Result<(), Error> {
-     *     unimplemented!();
-     * } */
+    pub fn convert_results_to_csv(&self) -> Result<i32> {
+        let _ = self.save_terminal_log();
+
+        let mut reports_path = get_reports_path(&self.common, &self.run)?;
+        read_results_xml_to_csv(
+            &self.run.indi_set,
+            &reports_path,
+            &reports_path.with_extension("csv"))
+    }
+
+    pub fn cleanup(&self) -> Result<()> {
+        self.delete_report()?;
+        self.delete_terminal_log()
+    }
 }
 
 /* async fn find_process(name : String) -> heim::process::ProcessResult<Process>

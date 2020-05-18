@@ -1,0 +1,58 @@
+---
+name: TSI_MACD
+filename: tsi_macd_htf
+class: TwoLinesCross
+inputs:
+# input ENUM_TIMEFRAMES TimeFrame=PERIOD_H4;
+    - - 0  # current
+# input Smooth_Method XMA_Method=MODE_EMA;
+    - - 1.0
+      - 0.0
+      - 9.0
+      - 1.0
+# input uint XFast=8;
+    - - 8.0
+      - 3.0
+      - 17.0
+      - 1.0
+# input uint XSlow=21;
+    - - 21.0
+      - 15.0
+      - 30.0
+      - 1.0
+# input uint MomPeriod=1;
+    - - 1.0
+      - 1.0
+      - 8.0
+      - 1.0
+# input uint XLength1=5;
+    - - 5.0
+      - 1.0
+      - 10.0
+      - 1.0
+# input uint XLength2=8;
+    - - 8.0
+      - 3.0
+      - 18.0
+      - 1.0
+# input uint XLength3=5;
+    - - 5.0
+      - 3.0
+      - 15.0
+      - 1.0
+# input int XPhase=15;
+    - - 15.0
+      - 5.0
+      - 25.0
+      - 1.0
+# input Applied_price_ IPC=PRICE_CLOSE;
+    - - 1.0
+      - 1.0
+      - 12.0
+      - 1.0
+# input int Shift=0;
+    - - 0.0
+buffers:
+  - 0
+  - 1
+shift: 0

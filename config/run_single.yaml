@@ -1,7 +1,7 @@
 ---
 name: bt_run
 indi_set:
-  Confirm: config/indicator/confirm/ash.yaml
+  Confirm: config/indicator/confirm/tsi_macd.yaml
   # Confirm2: ~
   # Confirm3: ~
   # Exit: ~

@@ -71,6 +71,61 @@ impl Indicator {
         Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
     }
 
+
+    pub fn count_inputs_crossed(&self) -> u64 {
+        let lengths = self.count_input_length();
+        if lengths.len() == 0 {
+            return 0u64;
+        }
+        lengths.iter().fold(1u64, |prod, x| prod * x)
+    }
+
+    pub fn count_input_length(&self) -> Vec<u64> {
+        use bigdecimal::ToPrimitive;
+        self.inputs
+            .iter()
+            // .filter(|i| i.len() == 3 || i.len() == 4)
+            .map(|i|
+                 match i.len() {
+                3 => (((i[1].to_f32().unwrap() - &i[0].to_f32().unwrap()) + 1f32)
+                      / &i[2].to_f32().unwrap()).floor() as u64,
+                4 => (((i[2].to_f32().unwrap() - &i[1].to_f32().unwrap()) + 1f32)
+                      / &i[3].to_f32().unwrap()).floor() as u64,
+                _ => 1u64,
+            })
+            .collect()
+    }
+
+    pub fn slice_longest_input(&self) -> Option<Vec<Self>> {
+        use std::cmp::Ordering;
+        use bigdecimal::ToPrimitive;
+
+        let index_of_max: Option<usize> = self.count_input_length()
+            .iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Equal))
+            .map(|(index, _)| index);
+
+        if let Some(i) = index_of_max {
+            println!("longest input: {:?}", self.inputs[i]);
+            let mut new_indis = vec![self.clone(), self.clone()];
+            let start_idx = 0;
+            if self.inputs[i].len() == 4 {
+                let start_idx = 1;
+            }
+            let start = &self.inputs[i][start_idx];
+            let stop = &self.inputs[i][start_idx + 1];
+            let step = &self.inputs[i][start_idx + 2];
+
+            let new_start = start + (stop - start) / 2;
+            new_indis[0].inputs[i][start_idx + 1] = &new_start - step;
+            new_indis[1].inputs[i][start_idx] = new_start;
+            return Some(new_indis);
+        }
+
+        None
+    }
+
     // fn parse_result_set(&self, result_params: &mut VecDeque<f32>) -> Self {
     //     Indicator {
     //         name: self.name.clone(),
@@ -306,5 +361,66 @@ mod test {
             // println!("{:#?}", indi);
             assert!(indi.is_ok());
         }
+    }
+
+    #[test]
+    fn count_crossed_test() {
+        let mut indi = Indicator {
+            name: "ama".to_string(),
+            filename: None,
+            shift: 0,
+            inputs: Vec::new(),
+            buffers: None,
+            params: None,
+            class: Preset,
+        };
+
+        assert_eq!(indi.count_inputs_crossed(), 0);
+
+        indi.inputs = vec_vec_to_bigdecimal(vec![vec![1.]]);
+        assert_eq!(indi.count_inputs_crossed(), 1);
+
+        // indi.inputs.push(vec_to_bigdecimal(vec![]))
+        indi.inputs.push(vec_to_bigdecimal(vec![11., 15., 1.]));
+        assert_eq!(indi.count_inputs_crossed(), 5);
+
+        indi.inputs
+            .push(vec_to_bigdecimal(vec![15., 11., 20., 0.5]));
+        assert_eq!(indi.count_inputs_crossed(), 100);
+
+        indi.slice_longest_input();
+    }
+
+    #[test]
+    fn slice_indicator_test() {
+        let mut indi = Indicator {
+            name: "ama".to_string(),
+            filename: None,
+            shift: 0,
+            inputs: Vec::new(),
+            buffers: None,
+            params: None,
+            class: Preset,
+        };
+
+        assert!(indi.slice_longest_input().is_none());
+
+        indi.inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.]]);
+        let mut indis = vec![indi.clone(), indi.clone()];
+        indis[0].inputs = vec_vec_to_bigdecimal(vec![vec![10., 14., 1.]]);
+        indis[1].inputs = vec_vec_to_bigdecimal(vec![vec![15., 20., 1.]]);
+        assert_eq!(indi.slice_longest_input(), Some(indis));
+
+        indi.inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![10., 20., 0.5]]);
+        let mut indis = vec![indi.clone(), indi.clone()];
+        indis[0].inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![10., 14.5, 0.5]]);
+        indis[1].inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![15., 20., 0.5]]);
+        assert_eq!(indi.slice_longest_input(), Some(indis));
+
+        indi.inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![20., 10., -0.5]]);
+        let mut indis = vec![indi.clone(), indi.clone()];
+        indis[0].inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![20., 15.5, -0.5]]);
+        indis[1].inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![15., 10., -0.5]]);
+        assert_eq!(indi.slice_longest_input(), Some(indis));
     }
 }

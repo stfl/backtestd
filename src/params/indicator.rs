@@ -107,11 +107,11 @@ impl Indicator {
             .map(|(index, _)| index);
 
         if let Some(i) = index_of_max {
-            println!("longest input: {:?}", self.inputs[i]);
+            debug!("slicing longest input: {:?}", self.inputs[i]);
             let mut new_indis = vec![self.clone(), self.clone()];
-            let start_idx = 0;
+            let mut start_idx = 0;
             if self.inputs[i].len() == 4 {
-                let start_idx = 1;
+                start_idx = 1;
             }
             let start = &self.inputs[i][start_idx];
             let stop = &self.inputs[i][start_idx + 1];
@@ -421,6 +421,12 @@ mod test {
         let mut indis = vec![indi.clone(), indi.clone()];
         indis[0].inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![20., 15.5, -0.5]]);
         indis[1].inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![15., 10., -0.5]]);
+        assert_eq!(indi.slice_longest_input(), Some(indis));
+
+        indi.inputs = vec_vec_to_bigdecimal(vec![vec![15., 5., 25., 1.]]);
+        let mut indis = vec![indi.clone(), indi.clone()];
+        indis[0].inputs = vec_vec_to_bigdecimal(vec![vec![15., 5., 14., 1.]]);
+        indis[1].inputs = vec_vec_to_bigdecimal(vec![vec![15., 15., 25., 1.]]);
         assert_eq!(indi.slice_longest_input(), Some(indis));
     }
 }

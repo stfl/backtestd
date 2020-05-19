@@ -82,7 +82,22 @@ impl IndicatorSet {
         error!("longest indicator not found in {:?}", self);
         None
     }
+
+    pub fn slice_recursive(self, target_length: u64) -> Vec<Self> {
+        let cnt = self.count_inputs_crossed();
+        if cnt < target_length {
+            debug!("returning from slicing at length {}", cnt);
+            return vec![self]
+        }
+        self.slice_longest_input()
+            .unwrap()
+            .into_iter()
+            .map(|s| s.slice_recursive(target_length))
+            .flatten()
+            .collect()
+    }
 }
+
 
 // pub fn parse_result_set(&self, mut result_params: VecDeque<f32>) -> IndicatorSet {
 //     IndicatorSet {

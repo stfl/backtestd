@@ -34,10 +34,6 @@ impl BacktestRunner {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &String> {
-        self.run.iter()
-    }
-
     fn write_indi_params(&self) -> Result<()> {
         use crate::params::to_param_string::ToParamString;
         debug!("writing {:?}", self.common.params_path());

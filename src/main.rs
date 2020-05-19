@@ -199,14 +199,23 @@ async fn main() -> std::io::Result<()> {
             .expect("reading RunParamsFile failed")
             .into();
         debug!("run: {:?}", run);
-        let runner = BacktestRunner::new(run, &config);
-        runner.prepare_files().expect("prepare failed");
-        runner.run().expect("run failed");
-        runner
-            .convert_results_to_csv()
-            .expect("convert to csv failed");
-        if matches.value_of("CLEANUP").is_some() {
-            runner.cleanup().expect("cleanup failed");
+
+        // MT5 forces genetic optimization if there are more than 100M possibilities
+        let indi_sets = run.clone().indi_set.slice_recursive(100_000_000);
+        info!("starting {} runs", indi_sets.len());
+
+        for set in indi_sets {
+            let mut run = run.clone();
+            run.indi_set = set;
+            let mut runner = BacktestRunner::new(run, &config);
+            runner.prepare_files().expect("prepare failed");
+            runner.run().expect("run failed");
+            runner
+                .convert_results_to_csv()
+                .expect("convert to csv failed");
+            if matches.value_of("CLEANUP").is_some() {
+                runner.cleanup().expect("cleanup failed");
+            }
         }
         return Ok(());
     }

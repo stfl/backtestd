@@ -126,10 +126,6 @@ OptimizationCriterion={opti_crit}",
         let json_file = File::create(Path::new(file))?;
         Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
     }
-
-    pub fn iter(&self) -> impl Iterator<Item = &String> {
-        self.symbols.iter()
-    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]

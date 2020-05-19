@@ -200,7 +200,7 @@ async fn main() -> std::io::Result<()> {
             .into();
         debug!("run: {:?}", run);
         let runner = BacktestRunner::new(run, &config);
-        runner.prepare().expect("prepare failed");
+        runner.prepare_files().expect("prepare failed");
         runner.run().expect("run failed");
         runner
             .convert_results_to_csv()
@@ -238,7 +238,7 @@ async fn backtest_run(
     let config = config.into_inner();
     info!("running backtest with common: {:?}\nrun:{:?}", config, run);
     let runner = BacktestRunner::new(run, &config);
-    runner.prepare().map_err(|e| ErrorInternalServerError(e))?;
+    runner.prepare_files().map_err(|e| ErrorInternalServerError(e))?;
     runner.run().map_err(|e| ErrorInternalServerError(e))?;
     Ok(HttpResponse::Ok().json(
         runner

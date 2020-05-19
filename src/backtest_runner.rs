@@ -86,7 +86,7 @@ impl BacktestRunner {
         ret
     }
 
-    pub fn prepare(&self) -> Result<()> {
+    pub fn prepare_files(&self) -> Result<()> {
         self.write_indi_params()?;
         fs::create_dir_all(get_reports_dir(&self.common, &self.run)?)?;
         self.write_terminal_config()?;

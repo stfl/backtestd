@@ -1,8 +1,11 @@
 use std::borrow::Cow;
 use std::{
-    fs, io,
+    fs,
     path::{Path, PathBuf},
 };
+
+use std::fs::File;
+use std::io::{self, BufReader};
 
 use crate::params::indicator_set::IndicatorSet;
 use crate::params::*;
@@ -14,6 +17,9 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde_derive;
 
+use quick_xml::de::{from_reader, DeError};
+use serde::Deserialize;
+
 pub fn read_results_xml(
     input_indi_set: &IndicatorSet,
     results_file: PathBuf,
@@ -23,66 +29,65 @@ pub fn read_results_xml(
     report_reader.trim_text(true);
     let mut count = 0;
     let mut buf = Vec::new();
-    let mut txt = Vec::<String>::new();
     let mut rows = Vec::new(); // may be larger as well
-                               // let mut results: HashMap<IndicatorSet, BacktestResult>::new();
+    let mut txts = Vec::<String>::new();
+    let mut txt: Option<String> = None;
+
     loop {
         match report_reader.read_event(&mut buf) {
             Ok(Event::Start(ref e)) => {
                 match e.local_name() {
                     b"Row" => {
                         count += 1;
-                        txt.clear(); // delete the values but keep the capacity
+                        txts.clear(); // delete the values but keep the capacity
+                                      // state = State::Row;
                     }
+                    // b"Data" => state = State::Data,
                     _ => (),
                 }
-            }
-            Ok(Event::End(ref e)) => {
-                match e.local_name() {
-                    b"Row" => {
+            },
+            Ok(Event::End(ref e)) => match e.local_name() {
+                b"Row" => {
                         if count > 1 {
                             // ignore the header row
                             rows.push(ResultRow {
-                                pass: txt[0].parse().context(format!("Parsing Numeric 0 failed {:?}", txt[0]))?,
-                                result: txt[1].parse().context("Parsing Numeric 1 failed")?,
-                                profit: txt[2].parse().context("Parsing Numeric 2 failed")?,
-                                expected_payoff: txt[3]
+                                pass: txts[0]
+                                    .parse()
+                                    .context(format!("Parsing Numeric 0 failed {:?}", txts[0]))?,
+                                result: txts[1].parse().context("Parsing Numeric 1 failed")?,
+                                profit: txts[2].parse().context("Parsing Numeric 2 failed")?,
+                                expected_payoff: txts[3]
                                     .parse()
                                     .context("Parsing Numeric 3 failed")?,
-                                profit_factor: txt[4].parse().context("Parsing Numeric 4 failed")?,
-                                recovery_factor: txt[5]
+                                profit_factor: txts[4]
+                                    .parse()
+                                    .context("Parsing Numeric 4 failed")?,
+                                recovery_factor: txts[5]
                                     .parse()
                                     .context("Parsing Numeric 5 failed")?,
-                                sharpe_ratio: txt[6].parse().context("Parsing Numeric 6 failed")?,
-                                custom: txt[7].parse().context("Parsing Numeric 7 failed")?,
-                                equity_dd: txt[8].parse().context("Parsing Numeric 8 failed")?,
-                                trades: txt[9].parse().context("Parsing Numeric 9 failed")?,
-                                params: txt[10..]
+                                sharpe_ratio: txts[6].parse().context("Parsing Numeric 6 failed")?,
+                                custom: txts[7].parse().context("Parsing Numeric 7 failed")?,
+                                equity_dd: txts[8].parse().context("Parsing Numeric 8 failed")?,
+                                trades: txts[9].parse().context("Parsing Numeric 9 failed")?,
+                                params: txts[10..]
                                     .iter()
                                     .map(|s| s.parse().expect("Parsing Numeric 10 input failed"))
                                     .collect(),
-                            })
-                            // rows.push(BacktestResult {
-                            //     /* indi_set: input_indi_set.parse_result_set(
-                            //      *     txt[10..]
-                            //      *         .iter()
-                            //      *         .map(|s| s.parse().expect("Parsing Numeric input failed"))
-                            //      *         .collect(),
-                            //      * ), */
-                            //     params: txt[10..]
-                            //         .iter()
-                            //         .map(|s| s.parse().expect("Parsing Numeric input failed"))
-                            //         .collect(),
-                            //     profit: txt[2].parse().context("Parsing Numeric failed")?,
-                            //     result: txt[7].parse().context("Parsing Numeric failed")?,
-                            //     trades: txt[9].parse().context("Parsing Numeric failed")?,
-                            // })
+                            });
                         }
+                },
+                b"Data" => {
+                    // state = State::Row;
+                    if let Some(t) = &txt {
+                        txts.push(t.into());
+                    } else {
+                        txts.push("".into());
                     }
-                    _ => (),
-                }
-            }
-            Ok(Event::Text(e)) => txt.push(e.unescape_and_decode(&report_reader)?),
+                    txt = None;
+                },
+                _ => (),
+            },
+            Ok(Event::Text(e)) => txt = Some(e.unescape_and_decode(&report_reader)?),
             Ok(Event::Eof) => break,
             _ => (),
         }
@@ -107,6 +112,62 @@ pub fn read_results_xml(
         );
     }
     Ok(rows)
+}
+
+pub fn read_results_xml_to_csv(
+    xml_file: &Path,
+    csv_file: &Path,
+) -> Result<i32> {
+    let mut report_reader = Reader::from_file(xml_file)?;
+    report_reader.trim_text(true);
+    let mut csv_writer = csv::Writer::from_path(csv_file)?;
+
+    let mut count = 0;
+    let mut buf = Vec::new();
+    let mut txts = Vec::<String>::new();
+    let mut txt: Option<String> = None;
+
+    loop {
+        match report_reader.read_event(&mut buf) {
+            Ok(Event::Start(ref e)) => {
+                match e.local_name() {
+                    b"Row" => {
+                        count += 1;
+                        txts.clear(); // delete the values but keep the capacity
+                                      // state = State::Row;
+                    }
+                    // b"Data" => state = State::Data,
+                    _ => (),
+                }
+            }
+            Ok(Event::End(ref e)) => match e.local_name() {
+                b"Row" => {
+                    csv_writer.write_record(&txts)?;
+                    // state = State::None;
+                }
+                b"Data" => {
+                    // state = State::Row;
+                    if let Some(t) = &txt {
+                        txts.push(t.into());
+                    } else {
+                        txts.push("".into());
+                    }
+                    txt = None;
+                }
+                _ => (),
+            },
+            Ok(Event::Text(e)) => txt = Some(e.unescape_and_decode(&report_reader)?),
+            Ok(Event::Eof) => break,
+            _ => (),
+        }
+        buf.clear();
+    }
+
+    debug!(
+        "read {} result rows\nfrom {:?}\ninto {:?}",
+        count, xml_file, csv_file
+    );
+    Ok(count)
 }
 
 #[cfg(test)]
@@ -150,6 +211,18 @@ mod xml_test {
 
         let rows = read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
         assert_eq!(rows.len(), 663);
+    }
+
+    #[test]
+    fn read_results_xml_to_csv_test() {
+        fs::remove_file("/tmp/bt_run.csv");
+        let rows = read_results_xml_to_csv(
+            &Path::new("tests/bt_run.xml"),
+            &Path::new("/tmp/bt_run.csv"),
+        )
+        .unwrap();
+        assert_eq!(rows, 5714);
+        assert!(Path::new("/tmp/bt_run.csv").exists());
     }
 
     #[test]
@@ -224,48 +297,4 @@ mod xml_test {
             assert_eq!(rows.len(), 663)
         });
     }
-}
-
-pub fn read_results_xml_to_csv(
-    input_indi_set: &IndicatorSet,
-    results_file: &Path,
-    csv_file: &Path,
-) -> Result<i32> {
-    let mut report_reader = Reader::from_file(results_file)?;
-    report_reader.trim_text(true);
-    let mut csv_writer = csv::Writer::from_path(csv_file)?;
-
-    let mut count = 0;
-    let mut buf = Vec::new();
-    let mut txt = Vec::<String>::new();
-
-    loop {
-        match report_reader.read_event(&mut buf) {
-            Ok(Event::Start(ref e)) => {
-                match e.local_name() {
-                    b"Row" => {
-                        count += 1;
-                        txt.clear(); // delete the values but keep the capacity
-                    }
-                    _ => (),
-                }
-            }
-            Ok(Event::End(ref e)) => match e.local_name() {
-                b"Row" => {
-                    csv_writer.write_record(&txt)?;
-                }
-                _ => (),
-            },
-            Ok(Event::Text(e)) => txt.push(e.unescape_and_decode(&report_reader)?),
-            Ok(Event::Eof) => break,
-            _ => (),
-        }
-        buf.clear();
-    }
-
-    debug!(
-        "read {} result rows\nfrom {:?}\ninto {:?}",
-        count, results_file, csv_file
-    );
-    Ok(count)
 }

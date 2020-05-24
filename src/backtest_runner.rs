@@ -143,7 +143,6 @@ impl BacktestRunner {
 
         let mut reports_path = get_reports_path(&self.common, &self.run)?;
         read_results_xml_to_csv(
-            &self.run.indi_set,
             &reports_path,
             &reports_path.with_extension("csv"),
         )

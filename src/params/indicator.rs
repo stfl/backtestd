@@ -71,7 +71,6 @@ impl Indicator {
         Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
     }
 
-
     pub fn count_inputs_crossed(&self) -> u64 {
         let lengths = self.count_input_length();
         if lengths.len() == 0 {
@@ -85,22 +84,24 @@ impl Indicator {
         self.inputs
             .iter()
             // .filter(|i| i.len() == 3 || i.len() == 4)
-            .map(|i|
-                 match i.len() {
+            .map(|i| match i.len() {
                 3 => (((i[1].to_f32().unwrap() - &i[0].to_f32().unwrap()) + 1f32)
-                      / &i[2].to_f32().unwrap()).floor() as u64,
+                    / &i[2].to_f32().unwrap())
+                    .floor() as u64,
                 4 => (((i[2].to_f32().unwrap() - &i[1].to_f32().unwrap()) + 1f32)
-                      / &i[3].to_f32().unwrap()).floor() as u64,
+                    / &i[3].to_f32().unwrap())
+                    .floor() as u64,
                 _ => 1u64,
             })
             .collect()
     }
 
     pub fn slice_longest_input(&self) -> Option<Vec<Self>> {
-        use std::cmp::Ordering;
         use bigdecimal::ToPrimitive;
+        use std::cmp::Ordering;
 
-        let index_of_max: Option<usize> = self.count_input_length()
+        let index_of_max: Option<usize> = self
+            .count_input_length()
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Equal))

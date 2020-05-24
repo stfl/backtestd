@@ -12,23 +12,29 @@ use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, json};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use std::collections::HashMap;
 use std::str::FromStr;
 
+pub mod common_params;
 pub mod indi_func;
+pub mod indicator;
 pub mod indicator_set;
+pub mod indicator_set_files;
+pub mod run_params;
+pub mod run_params_file;
 pub mod signal_class;
 mod to_config;
 pub mod to_param_string;
-// mod to_term
-pub mod indicator;
-pub mod indicator_set_files;
 
-use indicator_set::IndicatorSet;
-use signal_class::SignalClass;
-use to_param_string::ToParamString;
+pub use indicator_set::IndicatorSet;
+pub use signal_class::SignalClass;
+pub use to_param_string::ToParamString;
 
-use indi_func::IndiFunc;
-use std::collections::HashMap;
+pub use common_params::CommonParams;
+pub use run_params::RunParams;
+pub use run_params_file::RunParamsFile;
+
+pub use indi_func::IndiFunc;
 
 const FOREX_PAIRS: &'static [&'static str] = &[
     "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
@@ -36,233 +42,6 @@ const FOREX_PAIRS: &'static [&'static str] = &[
     "EURNZD", "CADCHF", "GBPAUD", "GBPCAD", "GBPNZD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD",
     "CADJPY",
 ];
-
-// input from the API
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct RunParams {
-    pub name: String,
-    pub indi_set: IndicatorSet,
-    pub date: (DateTime<Utc>, DateTime<Utc>),
-    pub backtest_model: BacktestModel,
-    pub optimize: OptimizeMode,
-    pub optimize_crit: OptimizeCrit,
-    pub visual: bool,
-    pub symbols: Vec<String>,
-}
-
-impl ToParamString for RunParams {
-    fn to_param_string(&self) -> String {
-        let mut string = self.to_param_string_vec().join("\n");
-        // string.push_str(&format!("Expert_Symbols={}", self.symbols.join(" ")));
-        debug!("Params config for terminal:\n{}", string);
-        return string;
-    }
-}
-
-impl RunParams {
-    pub fn to_param_string_vec(&self) -> Vec<String> {
-        let mut strings = self.indi_set.to_param_string_vec();
-        strings.extend(
-            self.symbols.iter().enumerate().map(|(i, symbol)| {
-                format!("Expert_symbol{idx}={symbol}", symbol = symbol, idx = i)
-            }),
-        );
-        strings
-        // for (i, symbol) in self.symbols.iter().enumerate() {
-        //     string.push_str(&format!(
-        //         "Expert_symbol{idx}={symbol}\n",
-        //         symbol = symbol,
-        //         idx = i,
-        //     ));
-        // }
-        // string.push_str(&format!("Expert_Symbols={}", self.symbols.join(" ")));
-        // debug!("Params config for terminal:\n{}", string);
-        // return string;
-    }
-
-    fn to_config(&self) -> String {
-        format!(
-            "
-Visual={visual}
-FromDate={from_date}
-ToDate={to_date}
-Model={model}
-Optimization={opti}
-OptimizationCriterion={opti_crit}",
-            visual = self.visual as i32,
-            from_date = DateTime::format(&self.date.0, "%Y.%m.%d"),
-            to_date = DateTime::format(&self.date.1, "%Y.%m.%d"),
-            model = self.backtest_model as u8,
-            opti = self.optimize as u8,
-            opti_crit = self.optimize_crit as u8
-        )
-    }
-
-    // TODO remove new() function which sets too many defaults
-    /* pub fn new() -> Self {
-     *     RunParams {
-     *         name: "backtest".to_string(),
-     *         indi_set: IndicatorSet::default(),
-     *         date: (
-     *             DateTime::parse_from_rfc3339("2017-08-01").unwrap().into(),
-     *             DateTime::parse_from_rfc3339("2019-08-20").unwrap().into(),
-     *         ),
-     *         backtest_model: BacktestModel::default(),
-     *         optimize: OptimizeMode::default(),
-     *         optimize_crit: OptimizeCrit::default(),
-     *         visual: false,
-     *         symbols: FOREX_PAIRS.iter().map(|s| s.to_string()).collect(),
-     *         // to_vec().to_string(),
-     *         // symbols_iter : symbols.iter()
-     *     }
-     * } */
-
-    pub fn from_file(file: &str) -> Result<Self> {
-        let json_file = File::open(Path::new(file))?;
-        Ok(serde_json::from_reader(json_file)?)
-    }
-
-    pub fn to_file(&self, file: &str) -> Result<()> {
-        let json_file = File::create(Path::new(file))?;
-        Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct RunParamsFile {
-    pub name: String,
-    pub indi_set: HashMap<IndiFunc, PathBuf>,
-    // pub date: (String, String),
-    pub date: (DateTime<Utc>, DateTime<Utc>),
-    pub backtest_model: BacktestModel,
-    pub optimize: OptimizeMode,
-    pub optimize_crit: OptimizeCrit,
-    pub visual: bool,
-    pub symbols: Vec<String>,
-}
-
-// impl TryFrom<RunParamsFile> for RunParams {
-impl From<RunParamsFile> for RunParams {
-    // type Error = anyhow::Error;
-
-    // fn try_from(s: RunParamsFile) -> Result<Self, Self::Error> {
-    fn from(s: RunParamsFile) -> Self {
-        // Ok(
-        RunParams {
-            name: s.name,
-            indi_set: s.indi_set.into(),
-            /* date: (
-             *     DateTime::parse_from_rfc3339(&s.date.0)?.into(),
-             *     DateTime::parse_from_rfc3339(&s.date.1)?.into(),
-             * ), */
-            date: s.date,
-            backtest_model: s.backtest_model,
-            optimize: s.optimize,
-            optimize_crit: s.optimize_crit,
-            visual: s.visual,
-            symbols: s.symbols,
-        }
-        // )
-    }
-}
-
-// terminal execution specific configuration
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct CommonParams {
-    pub params_file: String,
-    pub wine: bool,
-    pub terminal_exe: PathBuf,
-    pub workdir: PathBuf,
-    pub reports: PathBuf,
-    pub expert: String,
-    pub period: String,
-    pub login: String,
-    pub use_remote: bool,
-    pub use_local: bool,
-    pub replace_report: bool,
-    pub shutdown_terminal: bool,
-    pub deposit: u32,
-    pub currency: String,
-    pub leverage: u16,
-    pub execution_mode: u8,
-    // run_params : RunParams,
-}
-
-impl CommonParams {
-    /* pub fn new(workdir: &Path) -> Self {
-     *     CommonParams {
-     *         params_file: "expert_params.set".to_string(),
-     *         terminal_exe: PathBuf::from(r"C:\Program Files\MetaTrader 5\terminal64.exe"),
-     *         workdir: workdir.to_path_buf(),
-     *         reports: PathBuf::from("reports"),
-     *         // expert : "nnfx-ea/nnfx-ea.ex5".to_string(),
-     *         expert: r"expert\expert.ex5".to_string(),
-     *         period: "D1".to_string(),
-     *         login: "".to_string(),
-     *         use_remote: true,
-     *         use_local: true,
-     *         replace_report: true,
-     *         shutdown_terminal: true,
-     *         deposit: 10000,
-     *         currency: "USD".to_string(),
-     *         leverage: 100,
-     *         execution_mode: 0,
-     *         // run_params : run,
-     *     }
-     * } */
-
-    pub fn from_file(file: &str) -> Result<Self> {
-        let json_file = File::open(Path::new(file))?;
-        Ok(serde_json::from_reader(json_file)?)
-    }
-
-    pub fn to_file(&self, file: &str) -> Result<()> {
-        let json_file = File::create(Path::new(file))?;
-        Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
-    }
-
-    pub fn reports_dir(mut self, reports_dir: &str) -> Self {
-        self.reports = reports_dir.into();
-        self
-    }
-
-    pub fn params_path(&self) -> PathBuf {
-        let mut params_path = self.workdir.clone();
-        params_path.push("MQL5/Profiles/Tester");
-        params_path.push(&self.params_file);
-        params_path
-    }
-
-    pub fn to_config(&self) -> String {
-        format!(
-            "
-Expert={expert}
-ExpertParameters={params_file}
-Period={period}
-Login={login}
-UseLocal={use_local}
-UseRemote={use_remote}
-ReplaceReport={replace_report}
-ShutdownTerminal={shutdown_terminal}
-Deposit={deposit}
-Currency={currency}
-Leverage={leverage}
-ExecutionMode={exec_mode}",
-            expert = self.expert,
-            params_file = self.params_file,
-            period = self.period,
-            login = self.login,
-            use_local = self.use_local as i32,
-            use_remote = self.use_remote as i32,
-            replace_report = self.replace_report as i32,
-            shutdown_terminal = self.shutdown_terminal as i32,
-            deposit = self.deposit,
-            currency = self.currency,
-            leverage = self.leverage,
-            exec_mode = self.execution_mode
-        )
-    }
-}
 
 pub fn to_terminal_config(common: &CommonParams, run: &RunParams) -> Result<String> {
     ensure!(
@@ -367,6 +146,21 @@ pub enum OptimizeCrit {
 impl Default for OptimizeCrit {
     fn default() -> Self {
         OptimizeCrit::Custom
+    }
+}
+
+#[derive(Debug, PartialEq, Copy, Clone, Serialize_repr, Deserialize_repr)]
+#[repr(u8)]
+pub enum StoreResults {
+    None = 0,    // optimization disabled
+    SideChanges, // "Slow complete algorithm"
+    Buffers,     // "Fast genetic based algorithm"
+    Results,     // "All symbols selected in Market Watch"
+}
+
+impl Default for StoreResults {
+    fn default() -> Self {
+        StoreResults::None
     }
 }
 
@@ -480,6 +274,7 @@ mod test {
             optimize_crit: OptimizeCrit::Custom,
             visual: false,
             symbols: vec!["USDCHF".to_string()],
+            store_results: StoreResults::None,
         };
 
         assert_eq!(
@@ -536,147 +331,6 @@ mod test {
      *     assert_eq!(sym_iter.next().unwrap(), "USDCHF");
      *     assert_eq!(sym_iter.next().unwrap(), "USDJPY");
      * } */
-
-    // TODO
-    #[test]
-    fn to_terminal_config_test() {
-        let common = CommonParams {
-            params_file: "expert_params.set".to_string(),
-            wine: false,
-            terminal_exe: PathBuf::from(r"C:\terminal64.exe"),
-            workdir: PathBuf::from(r"C:\workdir"),
-            reports: PathBuf::from("reports"),
-            expert: r"expert\expert.ex5".to_string(),
-            period: "D1".to_string(),
-            login: "1234".to_string(),
-            use_remote: true,
-            use_local: true,
-            replace_report: true,
-            shutdown_terminal: true,
-            deposit: 10000,
-            currency: "USD".to_string(),
-            leverage: 100,
-            execution_mode: 0,
-        };
-
-        let run = RunParams {
-            name: "test".to_string(),
-            indi_set: [
-                (
-                    Confirm,
-                    Indicator {
-                        name: "ma".to_string(),
-                        filename: None,
-                        shift: 0,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
-                        buffers: None,
-                        params: None,
-                        class: Preset,
-                    },
-                ),
-                (
-                    Confirm2,
-                    Indicator {
-                        name: "ma2".to_string(),
-                        filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
-                        shift: 1,
-                        buffers: None,
-                        params: None,
-                        class: Preset,
-                    },
-                ),
-                (
-                    Exit,
-                    Indicator {
-                        name: "exitor".to_string(),
-                        filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
-                        shift: 2,
-                        buffers: None,
-                        params: None,
-                        class: Preset,
-                    },
-                ),
-                (
-                    Baseline,
-                    Indicator {
-                        name: "Ichy".to_string(),
-                        filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
-                        shift: 0,
-                        buffers: None,
-                        params: None,
-                        class: Preset,
-                    },
-                ),
-                (
-                    Volume,
-                    Indicator {
-                        name: "WAE".to_string(),
-                        filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
-                        shift: 0,
-                        buffers: None,
-                        params: None,
-                        class: Preset,
-                    },
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect::<HashMap<IndiFunc, Indicator>>()
-            .into(),
-            date: (
-                DateTime::parse_from_rfc3339("2017-08-01T00:00:00-00:00")
-                    .unwrap()
-                    .into(),
-                DateTime::parse_from_rfc3339("2019-08-20T00:00:00-00:00")
-                    .unwrap()
-                    .into(),
-            ),
-            backtest_model: BacktestModel::EveryTick,
-            optimize: OptimizeMode::Complete,
-            optimize_crit: OptimizeCrit::Custom,
-            visual: false,
-            symbols: vec!["USDCHF", "AUDCAD", "USDJPY", "USDCAD"]
-                .iter()
-                .map(|s| s.to_string())
-                .collect(),
-        };
-
-        assert_eq!(
-            to_terminal_config(&common, &run).unwrap(),
-            r"[Common]
-Login=1234
-ProxyEnable=0
-CertInstall=0
-NewsEnable=0
-[Tester]
-
-Expert=expert\expert.ex5
-ExpertParameters=expert_params.set
-Period=D1
-Login=1234
-UseLocal=1
-UseRemote=1
-ReplaceReport=1
-ShutdownTerminal=1
-Deposit=10000
-Currency=USD
-Leverage=100
-ExecutionMode=0
-
-Visual=0
-FromDate=2017.08.01
-ToDate=2019.08.20
-Model=0
-Optimization=1
-OptimizationCriterion=6
-Symbol=USDJPY
-Report=reports\test.xml"
-        );
-    }
 
     #[test]
     fn json_test() {
@@ -800,6 +454,7 @@ Report=reports\test.xml"
             optimize_crit: OptimizeCrit::Custom,
             visual: false,
             symbols: vec!["EURUSD".to_string(), "AUDCAD".into()],
+            store_results: StoreResults::SideChanges,
         };
 
         let run_string = r#"{
@@ -843,6 +498,7 @@ Report=reports\test.xml"
                 "backtest_model": 0,
                 "optimize": 1,
                 "optimize_crit": 6,
+                "store_results": 1,
                 "visual": false,
                 "symbols": ["EURUSD", "AUDCAD"]
             }"#;
@@ -887,6 +543,7 @@ Report=reports\test.xml"
             optimize_crit: run_cl.optimize_crit,
             visual: run_cl.visual,
             symbols: run_cl.symbols,
+            store_results: run_cl.store_results,
         };
 
         let _ = serde_any::to_file("/tmp/run.yaml", &rpf);

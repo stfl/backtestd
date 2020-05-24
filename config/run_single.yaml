@@ -10,7 +10,7 @@ indi_set:
   # Volume: ~
 date:
   - 2016-01-01T00:00:00-00:00
-  - 2019-12-31T00:00:00-00:00
+  - 2020-01-01T00:00:00-00:00
 backtest_model: 2
     # EveryTick = 0,     // "Every tick"
     # OneMinuteOHLC = 1, // "1 minute OHLC"
@@ -33,3 +33,4 @@ optimize_crit: 6
 visual: true
 symbols:
   - EURUSD
+store_results: 1

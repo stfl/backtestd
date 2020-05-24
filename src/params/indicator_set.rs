@@ -21,6 +21,7 @@ use std::collections::HashMap;
     Deref,
     From,
     DerefMut,
+    Default,
 )]
 pub struct IndicatorSet(HashMap<IndiFunc, Indicator>);
 
@@ -63,8 +64,7 @@ impl IndicatorSet {
 
     pub fn slice_longest_input(&self) -> Option<Vec<Self>> {
         let lengths = self.count_input_length();
-        let longest = lengths.iter()
-            .max_by(|(_, a), (_, b)| a.cmp(b));
+        let longest = lengths.iter().max_by(|(_, a), (_, b)| a.cmp(b));
 
         if let Some((f, l)) = longest {
             debug!("longest Indicator {:?} with {} inputs", f, l);
@@ -123,9 +123,9 @@ mod test {
     use super::*;
     use crate::params::indi_func::IndiFunc::*;
     use crate::params::signal_class::SignalClass::*;
-    use std::collections::HashMap;
     use crate::params::vec_to_bigdecimal;
     use crate::params::vec_vec_to_bigdecimal;
+    use std::collections::HashMap;
     use std::path::Path;
 
     #[test]
@@ -184,28 +184,32 @@ mod test {
 
     #[test]
     fn slice_indi_set_test() {
-        let mut set: IndicatorSet = [(
-            Confirm,
-            Indicator {
-                name: "ama".to_string(),
-                filename: None,
-                shift: 0,
-                inputs: vec_vec_to_bigdecimal(vec![vec![10., 20., 1.]]),
-                buffers: None,
-                params: None,
-                class: Preset,
-            }),
-            (Confirm2,
-            Indicator {
-                name: "ama2".to_string(),
-                filename: None,
-                shift: 0,
-                inputs: vec_vec_to_bigdecimal(vec![vec![10., 20., 0.5]]),
-                buffers: None,
-                params: None,
-                class: Preset,
-            }
-            )]
+        let mut set: IndicatorSet = [
+            (
+                Confirm,
+                Indicator {
+                    name: "ama".to_string(),
+                    filename: None,
+                    shift: 0,
+                    inputs: vec_vec_to_bigdecimal(vec![vec![10., 20., 1.]]),
+                    buffers: None,
+                    params: None,
+                    class: Preset,
+                },
+            ),
+            (
+                Confirm2,
+                Indicator {
+                    name: "ama2".to_string(),
+                    filename: None,
+                    shift: 0,
+                    inputs: vec_vec_to_bigdecimal(vec![vec![10., 20., 0.5]]),
+                    buffers: None,
+                    params: None,
+                    class: Preset,
+                },
+            ),
+        ]
         .iter()
         .cloned()
         .collect::<HashMap<IndiFunc, Indicator>>()
@@ -214,8 +218,10 @@ mod test {
         set.slice_longest_input();
 
         let mut new_set = vec![set.clone(), set.clone()];
-        new_set[0].get_mut(&Confirm2).unwrap().inputs = vec_vec_to_bigdecimal(vec![vec![10., 14.5, 0.5]]);
-        new_set[1].get_mut(&Confirm2).unwrap().inputs = vec_vec_to_bigdecimal(vec![vec![15., 20., 0.5]]);
+        new_set[0].get_mut(&Confirm2).unwrap().inputs =
+            vec_vec_to_bigdecimal(vec![vec![10., 14.5, 0.5]]);
+        new_set[1].get_mut(&Confirm2).unwrap().inputs =
+            vec_vec_to_bigdecimal(vec![vec![15., 20., 0.5]]);
         assert_eq!(set.slice_longest_input(), Some(new_set));
     }
 }

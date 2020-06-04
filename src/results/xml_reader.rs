@@ -45,37 +45,31 @@ pub fn read_results_xml(
                     // b"Data" => state = State::Data,
                     _ => (),
                 }
-            },
+            }
             Ok(Event::End(ref e)) => match e.local_name() {
                 b"Row" => {
-                        if count > 1 {
-                            // ignore the header row
-                            rows.push(ResultRow {
-                                pass: txts[0]
-                                    .parse()
-                                    .context(format!("Parsing Numeric 0 failed {:?}", txts[0]))?,
-                                result: txts[1].parse().context("Parsing Numeric 1 failed")?,
-                                profit: txts[2].parse().context("Parsing Numeric 2 failed")?,
-                                expected_payoff: txts[3]
-                                    .parse()
-                                    .context("Parsing Numeric 3 failed")?,
-                                profit_factor: txts[4]
-                                    .parse()
-                                    .context("Parsing Numeric 4 failed")?,
-                                recovery_factor: txts[5]
-                                    .parse()
-                                    .context("Parsing Numeric 5 failed")?,
-                                sharpe_ratio: txts[6].parse().context("Parsing Numeric 6 failed")?,
-                                custom: txts[7].parse().context("Parsing Numeric 7 failed")?,
-                                equity_dd: txts[8].parse().context("Parsing Numeric 8 failed")?,
-                                trades: txts[9].parse().context("Parsing Numeric 9 failed")?,
-                                params: txts[10..]
-                                    .iter()
-                                    .map(|s| s.parse().expect("Parsing Numeric 10 input failed"))
-                                    .collect(),
-                            });
-                        }
-                },
+                    if count > 1 {
+                        // ignore the header row
+                        rows.push(ResultRow {
+                            pass: txts[0]
+                                .parse()
+                                .context(format!("Parsing Numeric 0 failed {:?}", txts[0]))?,
+                            result: txts[1].parse().context("Parsing Numeric 1 failed")?,
+                            profit: txts[2].parse().context("Parsing Numeric 2 failed")?,
+                            expected_payoff: txts[3].parse().context("Parsing Numeric 3 failed")?,
+                            profit_factor: txts[4].parse().context("Parsing Numeric 4 failed")?,
+                            recovery_factor: txts[5].parse().context("Parsing Numeric 5 failed")?,
+                            sharpe_ratio: txts[6].parse().context("Parsing Numeric 6 failed")?,
+                            custom: txts[7].parse().context("Parsing Numeric 7 failed")?,
+                            equity_dd: txts[8].parse().context("Parsing Numeric 8 failed")?,
+                            trades: txts[9].parse().context("Parsing Numeric 9 failed")?,
+                            params: txts[10..]
+                                .iter()
+                                .map(|s| s.parse().expect("Parsing Numeric 10 input failed"))
+                                .collect(),
+                        });
+                    }
+                }
                 b"Data" => {
                     // state = State::Row;
                     if let Some(t) = &txt {
@@ -84,7 +78,7 @@ pub fn read_results_xml(
                         txts.push("".into());
                     }
                     txt = None;
-                },
+                }
                 _ => (),
             },
             Ok(Event::Text(e)) => txt = Some(e.unescape_and_decode(&report_reader)?),
@@ -114,10 +108,7 @@ pub fn read_results_xml(
     Ok(rows)
 }
 
-pub fn read_results_xml_to_csv(
-    xml_file: &Path,
-    csv_file: &Path,
-) -> Result<i32> {
+pub fn read_results_xml_to_csv(xml_file: &Path, csv_file: &Path) -> Result<i32> {
     let mut report_reader = Reader::from_file(xml_file)?;
     report_reader.trim_text(true);
     let mut csv_writer = csv::Writer::from_path(csv_file)?;

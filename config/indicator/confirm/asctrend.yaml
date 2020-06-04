@@ -1,9 +1,0 @@
----
-name: asctrend
-class: Preset
-inputs:
-  # RISK 4
-  - - 1.0
-    - 10.0
-    - 1.0
-shift: 0

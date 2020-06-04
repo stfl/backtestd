@@ -87,7 +87,7 @@ impl IndicatorSet {
         let cnt = self.count_inputs_crossed();
         if cnt < target_length {
             debug!("returning from slicing at length {}", cnt);
-            return vec![self]
+            return vec![self];
         }
         self.slice_longest_input()
             .unwrap()
@@ -97,7 +97,6 @@ impl IndicatorSet {
             .collect()
     }
 }
-
 
 // pub fn parse_result_set(&self, mut result_params: VecDeque<f32>) -> IndicatorSet {
 //     IndicatorSet {

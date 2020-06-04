@@ -55,6 +55,12 @@ mod results;
 
 use results::xml_reader::*;
 
+// running the multi-currency EA is significantly slower than running on single Symbol
+// The overhead to init the backtest is also significant
+// If the number of crossed out inputs is "low" then running the multi-currency EA is faster
+// ... for OptimizeMode::Complete
+const RUN_LIMIT_MULTI_CURRENCY: u64 = 10_000;
+
 #[actix_rt::main]
 // async fn main() -> Result<(), Box<dyn std::error::Error>> {
 // async fn main() -> Result<(), anyhow::Error> {
@@ -198,16 +204,85 @@ async fn main() -> std::io::Result<()> {
         let run: RunParams = serde_any::from_file::<RunParamsFile, _>(input_file)
             .expect("reading RunParamsFile failed")
             .into();
-        debug!("run: {:?}", run);
 
-        // MT5 forces genetic optimization if there are more than 100M possibilities
-        let indi_sets = run.clone().indi_set.slice_recursive(100_000_000);
-        info!("starting {} runs", indi_sets.len());
+        let optimize = run.optimize;
+        let mut runs: Vec<RunParams> = Vec::new();
+        if optimize == OptimizeMode::Complete {
+            // MT5 forces genetic optimization if there are more than 100M possibilities
+            let new_sets = run.clone().indi_set.slice_recursive(100_000_000); // TODO implement slice_recursive on &self to not move indi_set out of run
 
-        for set in indi_sets {
-            let mut run = run.clone();
-            run.indi_set = set;
-            let mut runner = BacktestRunner::new(run, &config);
+            if new_sets.len() > 1 {
+                runs = new_sets
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, s)| {
+                        let mut r = run.clone();
+                        r.indi_set = s;
+                        r.name = format!("{}_{}", r.name, i);
+                        r
+                    })
+                    .collect::<Vec<RunParams>>();
+            } else {
+                runs = vec![run];
+            }
+        } else {
+            // if the vec was not filled yet. add the original run
+            runs = vec![run];
+        }
+
+        // delete all sqlite databases for this queue
+        for r in &runs {
+            std::fs::remove_file(
+                config
+                    .workdir
+                    .join(Path::new("MQL5/Files"))
+                    .join(&r.name)
+                    .with_extension("sqlite"),
+            );
+        }
+
+        if optimize != OptimizeMode::Genetic {
+            // create a vec of new runs with only a single Symbol
+            // if we test in Genetic mode use all Symbols
+            runs = runs
+                .into_iter()
+                .flat_map(|r| {
+                    if r.indi_set.count_inputs_crossed() > RUN_LIMIT_MULTI_CURRENCY {
+                        r.symbols
+                            .iter()
+                            .map(|s| {
+                                let mut rr = r.clone();
+                                rr.symbols = vec![s.into()];
+                                debug!("creating a separate run for {}", s);
+                                // keep the same name -> all Symbols are stored to the same sqlite db as individual table
+                                // rr.name = format!("{}_{}", r.name, s);
+                                rr
+                            })
+                            .collect::<Vec<RunParams>>()
+                    } else {
+                        vec![r]
+                    }
+                })
+                .collect();
+        }
+
+        info!(
+            "{} Runs in the queue:\n{}",
+            runs.len(),
+            runs.clone()
+                .into_iter()
+                .map(|r| format!("{}: {}", r.name, r.symbols.join(" ")))
+                .collect::<Vec<String>>()
+                .join("\n")
+        );
+
+        for r in runs {
+            debug!(
+                "Run: {:?}\nInputs: {}",
+                r,
+                r.indi_set.count_inputs_crossed()
+            );
+            let mut runner = BacktestRunner::new(r, &config);
             runner.prepare_files().expect("prepare failed");
             runner.run().expect("run failed");
             runner

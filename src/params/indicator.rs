@@ -126,29 +126,6 @@ impl Indicator {
 
         None
     }
-
-    // fn parse_result_set(&self, result_params: &mut VecDeque<f32>) -> Self {
-    //     Indicator {
-    //         name: self.name.clone(),
-    //         shift: self.shift,
-    //         inputs: self
-    //             .inputs
-    //             .clone()
-    //             .into_iter()
-    //             .map(|inp| {
-    //                 if (3..=4).contains(&inp.len()) {
-    //                     vec![result_params
-    //                         .pop_front()
-    //                         .expect("no more params found in result")]
-    //                 // TODO we MUST have a value here otherwise something went wrong with the test run
-    //                 // TODO assert value is in range
-    //                 } else {
-    //                     inp
-    //                 }
-    //             })
-    //             .collect(),
-    //     }
-    // }
 }
 
 fn input_param_str(input: &Vec<BigDecimal>) -> String {

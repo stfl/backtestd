@@ -51,7 +51,9 @@ pub fn to_terminal_config(common: &CommonParams, run: &RunParams) -> Result<Stri
     // generate the reports path for the terminal.ini with windows-style "\"
     let reports_path_relative = common
         .reports
-        .join(&run.name)
+        .join(run.name.clone() + "_" + &run.symbols
+              .iter()
+              .max_by(|x, y| x.cmp(y)).expect("get highest symbol failed"))
         .with_extension("xml")
         // .join("reports.xml")
         .iter()
@@ -93,7 +95,9 @@ pub fn get_reports_dir(common: &CommonParams, run: &RunParams) -> Result<PathBuf
 
 pub fn get_reports_path(common: &CommonParams, run: &RunParams) -> Result<PathBuf> {
     let reports_path = get_reports_dir(&common, &run)?
-        .join(&run.name)
+        .join(run.name.clone() + "_" + &run.symbols
+              .iter()
+              .max_by(|x, y| x.cmp(y)).expect("get highest symbol failed"))
         .with_extension("xml");
     Ok(reports_path)
 }
@@ -152,10 +156,10 @@ impl Default for OptimizeCrit {
 #[derive(Debug, PartialEq, Copy, Clone, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum StoreResults {
-    None = 0,    // optimization disabled
-    SideChanges, // "Slow complete algorithm"
-    Buffers,     // "Fast genetic based algorithm"
-    Results,     // "All symbols selected in Market Watch"
+    None = 0, // optimization disabled
+    SideChanges = 1, // "Slow complete algorithm"
+              // Buffers = 2,     // "Fast genetic based algorithm"
+              // Results = 3,     // "All symbols selected in Market Watch"
 }
 
 impl Default for StoreResults {
@@ -282,33 +286,21 @@ mod test {
             PathBuf::from(r"C:/workdir/reports/")
         );
 
-        let reports_path = get_reports_dir(&common, &run)
-            .unwrap()
-            .join(&run.name)
-            .with_extension("xml");
-        // reports_path.set_extension("xml");
-        let reports_path = reports_path.as_os_str();
-
-        assert_eq!(
-            reports_path.to_string_lossy(),
-            r"C:/workdir/reports/test.xml"
-        );
-
         assert_eq!(
             (*get_reports_path(&common, &run).unwrap()).to_str(),
-            Some(r"C:/workdir/reports/test.xml")
+            Some(r"C:/workdir/reports/test_USDCHF.xml")
         );
 
         common.workdir = PathBuf::from(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5");
         assert_eq!(
             (*get_reports_path(&common, &run).unwrap()).to_str(),
-            Some(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/test.xml")
+            Some(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/test_USDCHF.xml")
         );
 
         common.reports = PathBuf::from(r"reports/inner");
         assert_eq!(
             (*get_reports_path(&common, &run).unwrap()).to_str(),
-            Some(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/inner/test.xml")
+            Some(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/inner/test_USDCHF.xml")
         );
 
         // FIXME paths are not platform agnostic

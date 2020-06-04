@@ -142,15 +142,33 @@ impl BacktestRunner {
         let _ = self.save_terminal_log();
 
         let mut reports_path = get_reports_path(&self.common, &self.run)?;
-        read_results_xml_to_csv(
-            &reports_path,
-            &reports_path.with_extension("csv"),
-        )
+        let ret = read_results_xml_to_csv(&reports_path, &reports_path.with_extension("csv"));
+
+        // if self.run.store_results != StoreResults::None {
+        //     let mut cnt = 0;
+        //     while fs::metadata(
+        //         self.common
+        //             .workdir
+        //             .join(Path::new("MQL5/Files/bt_run_0_sides.sqlite"))
+        //         // .join(Path::new())
+        //     )?.len() == 0 {
+        //         // std::thread::sleep(std::time::Duration::from_nanos(
+        //         //     self.run.indi_set.count_inputs_crossed() * self.run.symbols.len() as u64,
+        //         // ));
+
+        //         std::thread::sleep(std::time::Duration::from_millis(50));
+        //         cnt += 1;
+        //     }
+        //     info!("waited {}ms for sqlite file", cnt * 50);
+        // }
+
+        ret
     }
 
     pub fn cleanup(&self) -> Result<()> {
         self.delete_report()?;
         self.delete_terminal_log()
+        // TODO delete sqlite file
     }
 }
 

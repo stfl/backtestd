@@ -1,9 +1,0 @@
----
-name: go
-class: Preset
-inputs:
-  # Period 174
-  - - 50.0
-    - 250.0
-    - 10.0
-shift: 0

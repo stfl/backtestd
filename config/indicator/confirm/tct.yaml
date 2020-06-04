@@ -1,9 +1,0 @@
----
-name: tct
-class: Preset
-inputs:
-  # Period
-  - - 5.0
-    - 50.0
-    - 2.0
-shift: 0

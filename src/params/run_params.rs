@@ -38,10 +38,8 @@ impl RunParams {
                 format!("Expert_symbol{idx}={symbol}", symbol = symbol, idx = i)
             }),
         );
-        strings.push(format!(
-            "Expert_Store_Results={}",
-            store_res = self.store_results as u8
-        ));
+        strings.push(format!("Expert_Store_Results={}", self.store_results as u8));
+        strings.push(format!("Expert_Title={}", self.name));
         strings
         // for (i, symbol) in self.symbols.iter().enumerate() {
         //     string.push_str(&format!(
@@ -255,7 +253,7 @@ Model=0
 Optimization=1
 OptimizationCriterion=6
 Symbol=USDJPY
-Report=reports\test.xml"
+Report=reports\test_USDJPY.xml"
         );
     }
 }

@@ -1,29 +1,10 @@
-use std::borrow::Cow;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
-
-use std::fs::File;
-use std::io::{self, BufReader};
-
-use crate::params::indicator_set::IndicatorSet;
-use crate::params::*;
-
 use super::ResultRow;
-
 use anyhow::{Context, Result};
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use serde_derive;
+use std::path::{Path, PathBuf};
 
-use quick_xml::de::{from_reader, DeError};
-use serde::Deserialize;
-
-pub fn read_results_xml(
-    input_indi_set: &IndicatorSet,
-    results_file: PathBuf,
-) -> Result<Vec<ResultRow>> {
+pub fn _read_results_xml(results_file: PathBuf) -> Result<Vec<ResultRow>> {
     debug!("reading results from {:?}", results_file);
     let mut report_reader = Reader::from_file(results_file.as_path())?;
     report_reader.trim_text(true);
@@ -164,15 +145,16 @@ pub fn read_results_xml_to_csv(xml_file: &Path, csv_file: &Path) -> Result<i32> 
 #[cfg(test)]
 mod xml_test {
     use super::*;
+    use crate::params::_vec_to_bigdecimal;
+    use crate::params::_vec_vec_to_bigdecimal;
     use crate::params::indi_func::IndiFunc;
     use crate::params::indi_func::IndiFunc::*;
     use crate::params::indicator::Indicator;
     use crate::params::indicator_set::IndicatorSet;
     use crate::params::signal_class::SignalClass::*;
     use crate::params::signal_class::SignalClass::*;
-    use crate::params::vec_to_bigdecimal;
-    use crate::params::vec_vec_to_bigdecimal;
     use std::collections::{BTreeMap, HashMap};
+    use std::fs;
     use test;
 
     #[test]
@@ -183,7 +165,7 @@ mod xml_test {
                 name: "Ash".to_owned(),
                 filename: None,
                 shift: 0u8,
-                inputs: vec_vec_to_bigdecimal(vec![
+                inputs: _vec_vec_to_bigdecimal(vec![
                     vec![14., 100., 3.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
@@ -200,7 +182,7 @@ mod xml_test {
         .collect::<HashMap<IndiFunc, Indicator>>()
         .into();
 
-        let rows = read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
+        let rows = _read_results_xml(PathBuf::from("tests/multicurrency.xml")).unwrap();
         assert_eq!(rows.len(), 663);
     }
 
@@ -228,7 +210,7 @@ mod xml_test {
                 name: "Ash".to_owned(),
                 filename: None,
                 shift: 0u8,
-                inputs: vec_vec_to_bigdecimal(vec![
+                inputs: _vec_vec_to_bigdecimal(vec![
                     vec![14., 100., 3.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
@@ -248,7 +230,7 @@ mod xml_test {
         // we are expacting more params in result than there are given
 
         // let result = std::panic::catch_unwind(|| {
-        read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
+        _read_results_xml(PathBuf::from("tests/multicurrency.xml")).unwrap();
         // });
         // assert!(result.is_err());
 
@@ -265,7 +247,7 @@ mod xml_test {
                 name: "Wae".to_owned(),
                 filename: None,
                 shift: 0u8,
-                inputs: vec_vec_to_bigdecimal(vec![
+                inputs: _vec_vec_to_bigdecimal(vec![
                     vec![14., 100., 3.],
                     vec![1., 30., 2.],
                     vec![1., 30., 2.],
@@ -283,8 +265,7 @@ mod xml_test {
         .into();
 
         b.iter(|| {
-            let rows =
-                read_results_xml(&indi_set, PathBuf::from("tests/multicurrency.xml")).unwrap();
+            let rows = _read_results_xml(PathBuf::from("tests/multicurrency.xml")).unwrap();
             assert_eq!(rows.len(), 663)
         });
     }

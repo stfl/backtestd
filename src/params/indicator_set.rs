@@ -1,13 +1,11 @@
-use anyhow::{ensure, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
 
 use super::indi_func::IndiFunc;
 use super::indicator::Indicator;
 
 use super::to_param_string::ToParamString;
 
-use derive_more::{Constructor, Deref, DerefMut, From, Index, IndexMut, IntoIterator};
+use derive_more::{Constructor, Deref, DerefMut, From, IntoIterator};
 use std::collections::HashMap;
 
 #[derive(
@@ -33,8 +31,6 @@ impl ToParamString for IndicatorSet {
 
 impl IndicatorSet {
     pub fn to_param_string_vec(&self) -> Vec<String> {
-        use super::signal_class::SignalClass::*;
-
         self.clone()
             .into_iter()
             .map(|(func, indi)| {
@@ -53,7 +49,7 @@ impl IndicatorSet {
         if lengths.len() == 0 {
             return 0u64;
         }
-        lengths.iter().fold(1u64, |prod, (f, x)| prod * x)
+        lengths.iter().fold(1u64, |prod, (_, x)| prod * x)
     }
 
     pub fn count_input_length(&self) -> HashMap<IndiFunc, u64> {
@@ -98,47 +94,13 @@ impl IndicatorSet {
     }
 }
 
-// pub fn parse_result_set(&self, mut result_params: VecDeque<f32>) -> IndicatorSet {
-//     IndicatorSet {
-//         confirm: self
-//             .confirm
-//             .as_ref()
-//             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-//         confirm2: self
-//             .confirm2
-//             .as_ref()
-//             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-//         confirm3: self
-//             .confirm3
-//             .as_ref()
-//             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-//         exit: self
-//             .exit
-//             .as_ref()
-//             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-//         cont: self
-//             .cont
-//             .as_ref()
-//             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-//         baseline: self
-//             .baseline
-//             .as_ref()
-//             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-//         volume: self
-//             .volume
-//             .as_ref()
-//             .and_then(|i| Some(i.parse_result_set(&mut result_params))),
-//     }
-// }
-// }
-
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::params::_vec_to_bigdecimal;
+    use crate::params::_vec_vec_to_bigdecimal;
     use crate::params::indi_func::IndiFunc::*;
     use crate::params::signal_class::SignalClass::*;
-    use crate::params::vec_to_bigdecimal;
-    use crate::params::vec_vec_to_bigdecimal;
     use std::collections::HashMap;
     use std::path::Path;
 
@@ -205,7 +167,7 @@ mod test {
                     name: "ama".to_string(),
                     filename: None,
                     shift: 0,
-                    inputs: vec_vec_to_bigdecimal(vec![vec![10., 20., 1.]]),
+                    inputs: _vec_vec_to_bigdecimal(vec![vec![10., 20., 1.]]),
                     buffers: None,
                     params: None,
                     class: Preset,
@@ -217,7 +179,7 @@ mod test {
                     name: "ama2".to_string(),
                     filename: None,
                     shift: 0,
-                    inputs: vec_vec_to_bigdecimal(vec![vec![10., 20., 0.5]]),
+                    inputs: _vec_vec_to_bigdecimal(vec![vec![10., 20., 0.5]]),
                     buffers: None,
                     params: None,
                     class: Preset,
@@ -233,9 +195,9 @@ mod test {
 
         let mut new_set = vec![set.clone(), set.clone()];
         new_set[0].get_mut(&Confirm2).unwrap().inputs =
-            vec_vec_to_bigdecimal(vec![vec![10., 14.5, 0.5]]);
+            _vec_vec_to_bigdecimal(vec![vec![10., 14.5, 0.5]]);
         new_set[1].get_mut(&Confirm2).unwrap().inputs =
-            vec_vec_to_bigdecimal(vec![vec![15., 20., 0.5]]);
+            _vec_vec_to_bigdecimal(vec![vec![15., 20., 0.5]]);
         assert_eq!(set.slice_longest_input(), Some(new_set));
     }
 }

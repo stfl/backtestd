@@ -1,11 +1,6 @@
 use super::signal_class::SignalClass;
-use super::to_param_string::ToParamString;
-use anyhow::{ensure, Context, Result};
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
-
-use std::fs::File;
-use std::path::{Path, PathBuf};
 
 #[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
 pub struct Indicator {
@@ -20,13 +15,11 @@ pub struct Indicator {
 
 impl Indicator {
     pub fn to_param_string_vec(&self) -> Vec<String> {
-        use super::signal_class::SignalClass;
         let mut res = vec![
             format!(
                 "Indicator={}",
                 match self.class {
                     SignalClass::Preset => &self.name,
-                    // _ => self.filename.unwrap_or(self.name)
                     _ => match &self.filename {
                         Some(filename) => &filename,
                         _ => &self.name,
@@ -61,16 +54,6 @@ impl Indicator {
         res
     }
 
-    pub fn from_file(file: &str) -> Result<Self> {
-        let json_file = File::open(Path::new(file))?;
-        Ok(serde_json::from_reader(json_file)?)
-    }
-
-    pub fn to_file(&self, file: &str) -> Result<()> {
-        let json_file = File::create(Path::new(file))?;
-        Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
-    }
-
     pub fn count_inputs_crossed(&self) -> u64 {
         let lengths = self.count_input_length();
         if lengths.len() == 0 {
@@ -97,7 +80,6 @@ impl Indicator {
     }
 
     pub fn slice_longest_input(&self) -> Option<Vec<Self>> {
-        use bigdecimal::ToPrimitive;
         use std::cmp::Ordering;
 
         let index_of_max: Option<usize> = self
@@ -137,16 +119,15 @@ fn input_param_str(input: &Vec<BigDecimal>) -> String {
             input[0], input[1], input[3], input[2]
         ),
         e => panic!("wrong length of indicator params input: {}", e),
-        // e => Err(anyhow!("wrong length of indicator params input: {}", e)),
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::params::_vec_to_bigdecimal;
+    use crate::params::_vec_vec_to_bigdecimal;
     use crate::params::signal_class::SignalClass::*;
-    use crate::params::vec_to_bigdecimal;
-    use crate::params::vec_vec_to_bigdecimal;
     use glob::glob;
     use std::path::Path;
 
@@ -191,16 +172,6 @@ mod test {
                     .map(|s| s.to_string())
                     .collect::<Vec<String>>()
             );
-
-            // Panics
-            // indi.filename = None;
-            // assert_eq!(
-            //     indi.to_param_string_vec(),
-            //     vec!["Indicator=ama.ex5", "SignalClass=ZeroLineCross", "Shift=0"]
-            //         .iter()
-            //         .map(|s| s.to_string())
-            //         .collect::<Vec<String>>()
-            // );
         }
 
         {
@@ -217,7 +188,7 @@ mod test {
 
         {
             let mut indi = indi.clone();
-            indi.params = Some(vec_to_bigdecimal(vec![1.]));
+            indi.params = Some(_vec_to_bigdecimal(vec![1.]));
             assert_eq!(
                 indi.to_param_string_vec(),
                 vec![
@@ -231,7 +202,7 @@ mod test {
                 .collect::<Vec<String>>()
             );
 
-            indi.params = Some(vec_to_bigdecimal(vec![1., 4.55]));
+            indi.params = Some(_vec_to_bigdecimal(vec![1., 4.55]));
             assert_eq!(
                 indi.to_param_string_vec(),
                 vec![
@@ -256,7 +227,7 @@ mod test {
                 .collect::<Vec<String>>()
         );
 
-        indi.inputs.push(vec_to_bigdecimal(vec![3.]));
+        indi.inputs.push(_vec_to_bigdecimal(vec![3.]));
         assert_eq!(
             indi.to_param_string_vec(),
             vec![
@@ -270,7 +241,7 @@ mod test {
             .collect::<Vec<String>>()
         );
 
-        indi.inputs.push(vec_to_bigdecimal(vec![4.]));
+        indi.inputs.push(_vec_to_bigdecimal(vec![4.]));
         assert_eq!(
             indi.to_param_string_vec(),
             vec![
@@ -285,7 +256,7 @@ mod test {
             .collect::<Vec<String>>()
         );
 
-        indi.inputs.push(vec_to_bigdecimal(vec![10., 200., 0.5]));
+        indi.inputs.push(_vec_to_bigdecimal(vec![10., 200., 0.5]));
         assert_eq!(
             indi.to_param_string_vec(),
             vec![
@@ -302,7 +273,7 @@ mod test {
         );
 
         indi.inputs
-            .push(vec_to_bigdecimal(vec![15., 10., 20., 0.5]));
+            .push(_vec_to_bigdecimal(vec![15., 10., 20., 0.5]));
         assert_eq!(
             indi.to_param_string_vec(),
             vec![
@@ -341,7 +312,6 @@ mod test {
     fn load_indicators_test() {
         for entry in glob("config/indicator/*/*").unwrap().filter_map(Result::ok) {
             let indi = serde_any::from_file::<Indicator, _>(entry);
-            // println!("{:#?}", indi);
             assert!(indi.is_ok());
         }
     }
@@ -360,15 +330,14 @@ mod test {
 
         assert_eq!(indi.count_inputs_crossed(), 0);
 
-        indi.inputs = vec_vec_to_bigdecimal(vec![vec![1.]]);
+        indi.inputs = _vec_vec_to_bigdecimal(vec![vec![1.]]);
         assert_eq!(indi.count_inputs_crossed(), 1);
 
-        // indi.inputs.push(vec_to_bigdecimal(vec![]))
-        indi.inputs.push(vec_to_bigdecimal(vec![11., 15., 1.]));
+        indi.inputs.push(_vec_to_bigdecimal(vec![11., 15., 1.]));
         assert_eq!(indi.count_inputs_crossed(), 5);
 
         indi.inputs
-            .push(vec_to_bigdecimal(vec![15., 11., 20., 0.5]));
+            .push(_vec_to_bigdecimal(vec![15., 11., 20., 0.5]));
         assert_eq!(indi.count_inputs_crossed(), 100);
 
         indi.slice_longest_input();
@@ -388,28 +357,28 @@ mod test {
 
         assert!(indi.slice_longest_input().is_none());
 
-        indi.inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.]]);
+        indi.inputs = _vec_vec_to_bigdecimal(vec![vec![10., 20., 1.]]);
         let mut indis = vec![indi.clone(), indi.clone()];
-        indis[0].inputs = vec_vec_to_bigdecimal(vec![vec![10., 14., 1.]]);
-        indis[1].inputs = vec_vec_to_bigdecimal(vec![vec![15., 20., 1.]]);
+        indis[0].inputs = _vec_vec_to_bigdecimal(vec![vec![10., 14., 1.]]);
+        indis[1].inputs = _vec_vec_to_bigdecimal(vec![vec![15., 20., 1.]]);
         assert_eq!(indi.slice_longest_input(), Some(indis));
 
-        indi.inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![10., 20., 0.5]]);
+        indi.inputs = _vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![10., 20., 0.5]]);
         let mut indis = vec![indi.clone(), indi.clone()];
-        indis[0].inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![10., 14.5, 0.5]]);
-        indis[1].inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![15., 20., 0.5]]);
+        indis[0].inputs = _vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![10., 14.5, 0.5]]);
+        indis[1].inputs = _vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![15., 20., 0.5]]);
         assert_eq!(indi.slice_longest_input(), Some(indis));
 
-        indi.inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![20., 10., -0.5]]);
+        indi.inputs = _vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![20., 10., -0.5]]);
         let mut indis = vec![indi.clone(), indi.clone()];
-        indis[0].inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![20., 15.5, -0.5]]);
-        indis[1].inputs = vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![15., 10., -0.5]]);
+        indis[0].inputs = _vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![20., 15.5, -0.5]]);
+        indis[1].inputs = _vec_vec_to_bigdecimal(vec![vec![10., 20., 1.], vec![15., 10., -0.5]]);
         assert_eq!(indi.slice_longest_input(), Some(indis));
 
-        indi.inputs = vec_vec_to_bigdecimal(vec![vec![15., 5., 25., 1.]]);
+        indi.inputs = _vec_vec_to_bigdecimal(vec![vec![15., 5., 25., 1.]]);
         let mut indis = vec![indi.clone(), indi.clone()];
-        indis[0].inputs = vec_vec_to_bigdecimal(vec![vec![15., 5., 14., 1.]]);
-        indis[1].inputs = vec_vec_to_bigdecimal(vec![vec![15., 15., 25., 1.]]);
+        indis[0].inputs = _vec_vec_to_bigdecimal(vec![vec![15., 5., 14., 1.]]);
+        indis[1].inputs = _vec_vec_to_bigdecimal(vec![vec![15., 15., 25., 1.]]);
         assert_eq!(indi.slice_longest_input(), Some(indis));
     }
 }

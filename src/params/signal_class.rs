@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
 
 // FIXME define values same as in MQL
 #[derive(Debug, PartialEq, PartialOrd, Eq, Hash, Copy, Clone, Serialize, Deserialize)]

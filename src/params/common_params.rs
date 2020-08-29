@@ -1,5 +1,5 @@
 use super::*;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 // terminal execution specific configuration
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -20,47 +20,9 @@ pub struct CommonParams {
     pub currency: String,
     pub leverage: u16,
     pub execution_mode: u8,
-    // run_params : RunParams,
 }
 
 impl CommonParams {
-    /* pub fn new(workdir: &Path) -> Self {
-     *     CommonParams {
-     *         params_file: "expert_params.set".to_string(),
-     *         terminal_exe: PathBuf::from(r"C:\Program Files\MetaTrader 5\terminal64.exe"),
-     *         workdir: workdir.to_path_buf(),
-     *         reports: PathBuf::from("reports"),
-     *         // expert : "nnfx-ea/nnfx-ea.ex5".to_string(),
-     *         expert: r"expert\expert.ex5".to_string(),
-     *         period: "D1".to_string(),
-     *         login: "".to_string(),
-     *         use_remote: true,
-     *         use_local: true,
-     *         replace_report: true,
-     *         shutdown_terminal: true,
-     *         deposit: 10000,
-     *         currency: "USD".to_string(),
-     *         leverage: 100,
-     *         execution_mode: 0,
-     *         // run_params : run,
-     *     }
-     * } */
-
-    pub fn from_file(file: &str) -> Result<Self> {
-        let json_file = File::open(Path::new(file))?;
-        Ok(serde_json::from_reader(json_file)?)
-    }
-
-    pub fn to_file(&self, file: &str) -> Result<()> {
-        let json_file = File::create(Path::new(file))?;
-        Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
-    }
-
-    pub fn reports_dir(mut self, reports_dir: &str) -> Self {
-        self.reports = reports_dir.into();
-        self
-    }
-
     pub fn params_path(&self) -> PathBuf {
         let mut params_path = self.workdir.clone();
         params_path.push("MQL5/Profiles/Tester");

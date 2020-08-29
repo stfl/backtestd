@@ -1,19 +1,8 @@
-use std::collections::VecDeque;
-use std::convert::TryFrom;
-use std::ffi::{OsStr, OsString};
-use std::fs::File;
-use std::io;
-use std::path::{Path, PathBuf};
-
 use anyhow::{ensure, Context, Result};
 use bigdecimal::BigDecimal;
-use chrono::prelude::*;
-use chrono::DateTime;
 use serde::{Deserialize, Serialize};
-use serde_json::{self, json};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::collections::HashMap;
-use std::str::FromStr;
+use std::path::PathBuf;
 
 pub mod common_params;
 pub mod indi_func;
@@ -25,22 +14,20 @@ pub mod run_params_file;
 pub mod signal_class;
 pub mod to_param_string;
 
+pub use common_params::CommonParams;
+pub use indi_func::IndiFunc;
 pub use indicator_set::IndicatorSet;
+pub use run_params::RunParams;
+pub use run_params_file::RunParamsFile;
 pub use signal_class::SignalClass;
 pub use to_param_string::ToParamString;
 
-pub use common_params::CommonParams;
-pub use run_params::RunParams;
-pub use run_params_file::RunParamsFile;
-
-pub use indi_func::IndiFunc;
-
-const FOREX_PAIRS: &'static [&'static str] = &[
-    "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
-    "EURCAD", "GBPCHF", "GBPJPY", "AUDJPY", "AUDNZD", "AUDCAD", "AUDCHF", "CHFJPY", "EURAUD",
-    "EURNZD", "CADCHF", "GBPAUD", "GBPCAD", "GBPNZD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD",
-    "CADJPY",
-];
+// const FOREX_PAIRS: &'static [&'static str] = &[
+//     "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "EURCHF", "EURJPY", "EURGBP",
+//     "EURCAD", "GBPCHF", "GBPJPY", "AUDJPY", "AUDNZD", "AUDCAD", "AUDCHF", "CHFJPY", "EURAUD",
+//     "EURNZD", "CADCHF", "GBPAUD", "GBPCAD", "GBPNZD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD",
+//     "CADJPY",
+// ];
 
 pub fn to_terminal_config(common: &CommonParams, run: &RunParams) -> Result<String> {
     ensure!(
@@ -60,7 +47,6 @@ pub fn to_terminal_config(common: &CommonParams, run: &RunParams) -> Result<Stri
                     .expect("get highest symbol failed"),
         )
         .with_extension("xml")
-        // .join("reports.xml")
         .iter()
         .filter_map(|s| s.to_str())
         .collect::<Vec<&str>>()
@@ -90,7 +76,7 @@ Report={report}",
     ))
 }
 
-pub fn get_reports_dir(common: &CommonParams, run: &RunParams) -> Result<PathBuf> {
+pub fn get_reports_dir(common: &CommonParams) -> Result<PathBuf> {
     ensure!(
         common.reports.is_relative(),
         "Reports path needs to be relative"
@@ -99,7 +85,7 @@ pub fn get_reports_dir(common: &CommonParams, run: &RunParams) -> Result<PathBuf
 }
 
 pub fn get_reports_path(common: &CommonParams, run: &RunParams) -> Result<PathBuf> {
-    let reports_path = get_reports_dir(&common, &run)?
+    let reports_path = get_reports_dir(&common)?
         .join(
             run.name.clone()
                 + "_"
@@ -179,12 +165,12 @@ impl Default for StoreResults {
     }
 }
 
-pub fn vec_to_bigdecimal(vec: Vec<f32>) -> Vec<BigDecimal> {
+pub fn _vec_to_bigdecimal(vec: Vec<f32>) -> Vec<BigDecimal> {
     vec.iter().map(|v| (*v).into()).collect()
 }
 
-pub fn vec_vec_to_bigdecimal(vec: Vec<Vec<f32>>) -> Vec<Vec<BigDecimal>> {
-    vec.iter().map(|v| vec_to_bigdecimal(v.to_vec())).collect()
+pub fn _vec_vec_to_bigdecimal(vec: Vec<Vec<f32>>) -> Vec<Vec<BigDecimal>> {
+    vec.iter().map(|v| _vec_to_bigdecimal(v.to_vec())).collect()
 }
 
 #[cfg(test)]
@@ -195,19 +181,21 @@ mod test {
     use super::indicator_set::IndicatorSet;
     use super::signal_class::SignalClass::*;
     use super::*;
+    use chrono::DateTime;
     use std::collections::HashMap;
     use std::path::Path;
+    use std::str::FromStr;
 
     #[test]
     fn to_bigdecimal_test() {
         assert_eq!(
-            vec_to_bigdecimal(vec![3.]),
+            _vec_to_bigdecimal(vec![3.]),
             vec![BigDecimal::from_str("3.").unwrap()]
         );
-        assert_eq!(vec_to_bigdecimal(vec![3.]), vec![BigDecimal::from(3.)]);
-        assert_eq!(vec_to_bigdecimal(vec![3.]), vec![(3.).into()]);
+        assert_eq!(_vec_to_bigdecimal(vec![3.]), vec![BigDecimal::from(3.)]);
+        assert_eq!(_vec_to_bigdecimal(vec![3.]), vec![(3.).into()]);
         assert_eq!(
-            vec_to_bigdecimal(vec![3., 5.8, 60f32]),
+            _vec_to_bigdecimal(vec![3., 5.8, 60f32]),
             vec![
                 BigDecimal::from(3.),
                 BigDecimal::from(5.8),
@@ -215,7 +203,7 @@ mod test {
             ]
         );
         assert_eq!(
-            vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
+            _vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
             vec![
                 vec![BigDecimal::from(1.)],
                 vec![
@@ -293,7 +281,7 @@ mod test {
         };
 
         assert_eq!(
-            get_reports_dir(&common, &run).unwrap().as_path(),
+            get_reports_dir(&common).unwrap().as_path(),
             PathBuf::from(r"C:/workdir/reports/")
         );
 
@@ -316,7 +304,7 @@ mod test {
             )
         );
 
-        // FIXME paths are not platform agnostic
+        // TODO paths are not platform agnostic
         // reports need configured correctly for the platform!
         // common.reports = PathBuf::from(r"reports\inner");
         // assert_eq!(
@@ -324,18 +312,6 @@ mod test {
         //     Some(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/inner/test/reports.xml")
         // );
     }
-
-    /* #[test]
-     * fn run_iter_test() {
-     *     let mut run = RunParams::new();
-     *     run.symbols = vec!["USDCHF", "USDJPY", "USDCAD"]
-     *         .iter()
-     *         .map(|s| s.to_string())
-     *         .collect();
-     *     let mut sym_iter = run.iter();
-     *     assert_eq!(sym_iter.next().unwrap(), "USDCHF");
-     *     assert_eq!(sym_iter.next().unwrap(), "USDJPY");
-     * } */
 
     #[test]
     fn json_test() {
@@ -387,7 +363,7 @@ mod test {
                         name: "ma".to_string(),
                         filename: None,
                         shift: 0,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
+                        inputs: _vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
                         buffers: None,
                         params: None,
                         class: Preset,
@@ -398,7 +374,7 @@ mod test {
                     Indicator {
                         name: "ma2".to_string(),
                         filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
+                        inputs: _vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
                         shift: 1,
                         buffers: None,
                         params: None,
@@ -410,7 +386,10 @@ mod test {
                     Indicator {
                         name: "exitor".to_string(),
                         filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
+                        inputs: _vec_vec_to_bigdecimal(vec![
+                            vec![14., 100., 3.],
+                            vec![1., 30., 2.],
+                        ]),
                         shift: 2,
                         buffers: None,
                         params: None,
@@ -422,7 +401,7 @@ mod test {
                     Indicator {
                         name: "Ichy".to_string(),
                         filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
+                        inputs: _vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
                         shift: 0,
                         buffers: None,
                         params: None,
@@ -434,7 +413,7 @@ mod test {
                     Indicator {
                         name: "WAE".to_string(),
                         filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
+                        inputs: _vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
                         shift: 0,
                         buffers: None,
                         params: None,

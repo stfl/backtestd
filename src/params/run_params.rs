@@ -6,8 +6,6 @@ use super::*;
 use indicator_set::IndicatorSet;
 
 // input from the API
-// TODO derive Default -> requires date to impl Default
-// this may be done when changing date to (NaivaDate, NaiveDate)
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct RunParams {
     pub name: String,
@@ -23,8 +21,7 @@ pub struct RunParams {
 
 impl ToParamString for RunParams {
     fn to_param_string(&self) -> String {
-        let mut string = self.to_param_string_vec().join("\n");
-        // string.push_str(&format!("Expert_Symbols={}", self.symbols.join(" ")));
+        let string = self.to_param_string_vec().join("\n");
         debug!("Params config for terminal:\n{}", string);
         return string;
     }
@@ -41,16 +38,6 @@ impl RunParams {
         strings.push(format!("Expert_Store_Results={}", self.store_results as u8));
         strings.push(format!("Expert_Title={}", self.name));
         strings
-        // for (i, symbol) in self.symbols.iter().enumerate() {
-        //     string.push_str(&format!(
-        //         "Expert_symbol{idx}={symbol}\n",
-        //         symbol = symbol,
-        //         idx = i,
-        //     ));
-        // }
-        // string.push_str(&format!("Expert_Symbols={}", self.symbols.join(" ")));
-        // debug!("Params config for terminal:\n{}", string);
-        // return string;
     }
 
     pub fn to_config(&self) -> String {
@@ -71,43 +58,10 @@ OptimizationCriterion={opti_crit}",
         )
     }
 
-    // TODO remove new() function which sets too many defaults
-    /* pub fn new() -> Self {
-     *     RunParams {
-     *         name: "backtest".to_string(),
-     *         indi_set: IndicatorSet::default(),
-     *         date: (
-     *             DateTime::parse_from_rfc3339("2017-08-01").unwrap().into(),
-     *             DateTime::parse_from_rfc3339("2019-08-20").unwrap().into(),
-     *         ),
-     *         backtest_model: BacktestModel::default(),
-     *         optimize: OptimizeMode::default(),
-     *         optimize_crit: OptimizeCrit::default(),
-     *         visual: false,
-     *         symbols: FOREX_PAIRS.iter().map(|s| s.to_string()).collect(),
-     *         // to_vec().to_string(),
-     *         // symbols_iter : symbols.iter()
-     *     }
-     * } */
-
-    pub fn from_file(file: &str) -> Result<Self> {
-        let json_file = File::open(Path::new(file))?;
-        Ok(serde_json::from_reader(json_file)?)
-    }
-
-    pub fn to_file(&self, file: &str) -> Result<()> {
-        let json_file = File::create(Path::new(file))?;
-        Ok(serde_json::ser::to_writer_pretty(json_file, self)?)
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = &String> {
-        self.symbols.iter()
-    }
-
     pub fn split_run_into_queue(self) -> Vec<Self> {
         let run = self;
         let optimize = run.optimize;
-        let mut runs = match (optimize) {
+        let mut runs = match optimize {
             OptimizeMode::Complete => run.split_too_many_runs(),
             _ => vec![run],
         };
@@ -135,7 +89,7 @@ OptimizationCriterion={opti_crit}",
     }
 
     fn split_too_many_runs(self) -> Vec<Self> {
-        let mut runs: Vec<RunParams> = Vec::new();
+        let runs: Vec<RunParams>;
         let run = self;
         // MT5 forces genetic optimization if there are more than 100M possibilities
         let new_sets = run.clone().indi_set.slice_recursive(100_000_000); // TODO implement slice_recursive on &self to not move indi_set out of run
@@ -185,6 +139,8 @@ mod test {
     use super::indicator_set::IndicatorSet;
     use super::signal_class::SignalClass::*;
     use super::*;
+    use crate::params::_vec_to_bigdecimal;
+    use crate::params::_vec_vec_to_bigdecimal;
     use std::collections::HashMap;
     use std::path::Path;
 
@@ -218,7 +174,7 @@ mod test {
                         name: "ma".to_string(),
                         filename: None,
                         shift: 0,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
+                        inputs: _vec_vec_to_bigdecimal(vec![vec![1.], vec![1., 100., 3.]]),
                         buffers: None,
                         params: None,
                         class: Preset,
@@ -229,7 +185,7 @@ mod test {
                     Indicator {
                         name: "ma2".to_string(),
                         filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
+                        inputs: _vec_vec_to_bigdecimal(vec![vec![1.], vec![10., 200., 5.]]),
                         shift: 1,
                         buffers: None,
                         params: None,
@@ -241,7 +197,10 @@ mod test {
                     Indicator {
                         name: "exitor".to_string(),
                         filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![14., 100., 3.], vec![1., 30., 2.]]),
+                        inputs: _vec_vec_to_bigdecimal(vec![
+                            vec![14., 100., 3.],
+                            vec![1., 30., 2.],
+                        ]),
                         shift: 2,
                         buffers: None,
                         params: None,
@@ -253,7 +212,7 @@ mod test {
                     Indicator {
                         name: "Ichy".to_string(),
                         filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
+                        inputs: _vec_vec_to_bigdecimal(vec![vec![41.], vec![10.]]),
                         shift: 0,
                         buffers: None,
                         params: None,
@@ -265,7 +224,7 @@ mod test {
                     Indicator {
                         name: "WAE".to_string(),
                         filename: None,
-                        inputs: vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
+                        inputs: _vec_vec_to_bigdecimal(vec![vec![7.], vec![222.]]),
                         shift: 0,
                         buffers: None,
                         params: None,

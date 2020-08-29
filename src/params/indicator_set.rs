@@ -92,17 +92,27 @@ impl IndicatorSet {
             .flatten()
             .collect()
     }
+
+    pub fn _new_test(num: usize) -> Self {
+        use IndiFunc::*;
+        [
+            Confirm, Confirm2, Confirm3, Baseline, Volume, Continue, Exit,
+        ]
+        .iter()
+        .take(num)
+        .map(|f| (*f, Indicator::_new_test(*f, 0)))
+        .collect::<HashMap<IndiFunc, Indicator>>()
+        .into()
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::params::_vec_to_bigdecimal;
     use crate::params::_vec_vec_to_bigdecimal;
     use crate::params::indi_func::IndiFunc::*;
     use crate::params::signal_class::SignalClass::*;
     use std::collections::HashMap;
-    use std::path::Path;
 
     #[test]
     fn to_param_string_test() {
@@ -160,7 +170,7 @@ mod test {
 
     #[test]
     fn slice_indi_set_test() {
-        let mut set: IndicatorSet = [
+        let set: IndicatorSet = [
             (
                 Confirm,
                 Indicator {

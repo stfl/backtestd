@@ -59,4 +59,25 @@ ExecutionMode={exec_mode}",
             exec_mode = self.execution_mode
         )
     }
+
+    pub fn _new_test() -> Self {
+        CommonParams {
+            params_file: "expert_params.set".to_string(),
+            wine: false,
+            terminal_exe: PathBuf::from(r"C:\terminal64.exe"),
+            workdir: PathBuf::from(r"C:\workdir"),
+            reports: PathBuf::from("reports"),
+            expert: r"expert\expert.ex5".to_string(),
+            period: "D1".to_string(),
+            login: "1234".to_string(),
+            use_remote: true,
+            use_local: true,
+            replace_report: true,
+            shutdown_terminal: true,
+            deposit: 10000,
+            currency: "USD".to_string(),
+            leverage: 100,
+            execution_mode: 0,
+        }
+    }
 }

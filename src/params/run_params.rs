@@ -1,9 +1,8 @@
+use super::*;
 use chrono::prelude::*;
 use chrono::DateTime;
-use serde::{Deserialize, Serialize};
-
-use super::*;
 use indicator_set::IndicatorSet;
+use serde::{Deserialize, Serialize};
 
 // input from the API
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -38,6 +37,18 @@ impl RunParams {
         strings.push(format!("Expert_Store_Results={}", self.store_results as u8));
         strings.push(format!("Expert_Title={}", self.name));
         strings
+    }
+
+    pub fn get_reports_filename(&self) -> PathBuf {
+        PathBuf::from(
+            self.name.clone()
+                + "_"
+                + self
+                    .symbols
+                    .iter()
+                    .max_by(|x, y| x.cmp(y))
+                    .expect("cannot determine the alpahnumerical first symbol"),
+        )
     }
 
     pub fn to_config(&self) -> String {
@@ -129,6 +140,30 @@ OptimizationCriterion={opti_crit}",
             vec![r]
         }
     }
+
+    pub fn _new_test(num: usize) -> Self {
+        RunParams {
+            name: "test".to_string(),
+            date: (
+                DateTime::parse_from_rfc3339("2017-01-01T00:00:00-00:00")
+                    .unwrap()
+                    .into(),
+                DateTime::parse_from_rfc3339("2019-01-01T00:00:00-00:00")
+                    .unwrap()
+                    .into(),
+            ),
+            backtest_model: BacktestModel::EveryTick,
+            optimize: OptimizeMode::Complete,
+            optimize_crit: OptimizeCrit::Custom,
+            visual: false,
+            symbols: vec!["USDCHF", "NZDAUD"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            store_results: StoreResults::None,
+            indi_set: IndicatorSet::_new_test(num),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -136,13 +171,10 @@ mod test {
     use super::indi_func::IndiFunc;
     use super::indi_func::IndiFunc::*;
     use super::indicator::Indicator;
-    use super::indicator_set::IndicatorSet;
     use super::signal_class::SignalClass::*;
     use super::*;
-    use crate::params::_vec_to_bigdecimal;
     use crate::params::_vec_vec_to_bigdecimal;
     use std::collections::HashMap;
-    use std::path::Path;
 
     #[test]
     fn to_terminal_config_test() {

@@ -145,50 +145,18 @@ pub fn read_results_xml_to_csv(xml_file: &Path, csv_file: &Path) -> Result<i32> 
 #[cfg(test)]
 mod xml_test {
     use super::*;
-    use crate::params::_vec_to_bigdecimal;
-    use crate::params::_vec_vec_to_bigdecimal;
-    use crate::params::indi_func::IndiFunc;
-    use crate::params::indi_func::IndiFunc::*;
-    use crate::params::indicator::Indicator;
-    use crate::params::indicator_set::IndicatorSet;
-    use crate::params::signal_class::SignalClass::*;
-    use crate::params::signal_class::SignalClass::*;
-    use std::collections::{BTreeMap, HashMap};
     use std::fs;
     use test;
 
     #[test]
     fn read_results_xml_test() {
-        let indi_set: IndicatorSet = [(
-            Confirm,
-            Indicator {
-                name: "Ash".to_owned(),
-                filename: None,
-                shift: 0u8,
-                inputs: _vec_vec_to_bigdecimal(vec![
-                    vec![14., 100., 3.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                ]),
-                buffers: None,
-                params: None,
-                class: Preset,
-            },
-        )]
-        .iter()
-        .cloned()
-        .collect::<HashMap<IndiFunc, Indicator>>()
-        .into();
-
         let rows = _read_results_xml(PathBuf::from("tests/multicurrency.xml")).unwrap();
         assert_eq!(rows.len(), 663);
     }
 
     #[test]
     fn read_results_xml_to_csv_test() {
-        fs::remove_file("/tmp/bt_run.csv");
+        let _ = fs::remove_file("/tmp/bt_run.csv");
         let rows = read_results_xml_to_csv(
             &Path::new("tests/bt_run.xml"),
             &Path::new("/tmp/bt_run.csv"),
@@ -198,72 +166,8 @@ mod xml_test {
         assert!(Path::new("/tmp/bt_run.csv").exists());
     }
 
-    #[test]
-    #[should_panic]
-    #[ignore]
-    // the output format has changed to directly return a Vec of the given params.
-    // no casting into IndicatorSet
-    fn xml_results_not_enough_params() {
-        let indi_set: IndicatorSet = [(
-            Confirm,
-            Indicator {
-                name: "Ash".to_owned(),
-                filename: None,
-                shift: 0u8,
-                inputs: _vec_vec_to_bigdecimal(vec![
-                    vec![14., 100., 3.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                ]),
-                buffers: None,
-                params: None,
-                class: Preset,
-            },
-        )]
-        .iter()
-        .cloned()
-        .collect::<HashMap<IndiFunc, Indicator>>()
-        .into();
-        // we are expacting more params in result than there are given
-
-        // let result = std::panic::catch_unwind(|| {
-        _read_results_xml(PathBuf::from("tests/multicurrency.xml")).unwrap();
-        // });
-        // assert!(result.is_err());
-
-        // entered a random indi_set
-        /* let rows = read_results_xml(&indi_set, PathBuf::from("tests/report_AUDCAD.xml")).unwrap();
-         * assert_eq!(rows.len(), 176); */
-    }
-
     #[bench]
     fn bench_read_results_xml(b: &mut test::Bencher) {
-        let indi_set: IndicatorSet = [(
-            Confirm,
-            Indicator {
-                name: "Wae".to_owned(),
-                filename: None,
-                shift: 0u8,
-                inputs: _vec_vec_to_bigdecimal(vec![
-                    vec![14., 100., 3.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                    vec![1., 30., 2.],
-                ]),
-                buffers: None,
-                params: None,
-                class: Preset,
-            },
-        )]
-        .iter()
-        .cloned()
-        .collect::<HashMap<IndiFunc, Indicator>>()
-        .into();
-
         b.iter(|| {
             let rows = _read_results_xml(PathBuf::from("tests/multicurrency.xml")).unwrap();
             assert_eq!(rows.len(), 663)

@@ -89,7 +89,7 @@ impl BacktestRunner {
     }
 
     fn save_terminal_log(&self) -> Result<PathBuf> {
-        let run_log = get_reports_path(&self.common, &self.run)?.with_extension("log");
+        let run_log = get_reports_full_path(&self.common, &self.run)?.with_extension("log");
         if fs::rename(self.get_original_log_path(), &run_log).is_ok() {
             match fs::read(&run_log) {
                 Ok(s) => debug!("Tester output:\n{}", String::from_utf8_lossy(&s)),
@@ -111,7 +111,7 @@ impl BacktestRunner {
     }
 
     fn delete_xml_report(&self) -> Result<()> {
-        let report = get_reports_path(&self.common, &self.run)?;
+        let report = get_reports_full_path(&self.common, &self.run)?;
         debug!("deleting report {}", report.to_string_lossy());
         fs::remove_file(report)?;
         Ok(())
@@ -119,7 +119,7 @@ impl BacktestRunner {
 
     pub fn _read_results(&self) -> Result<Vec<ResultRow>> {
         let _ = self.save_terminal_log();
-        let results = _read_results_xml(get_reports_path(&self.common, &self.run)?)?;
+        let results = _read_results_xml(get_reports_full_path(&self.common, &self.run)?)?;
         // TODO trace! does not work anymore when includeing actix-web
         // trace!("{:?}", results);
         Ok(results)
@@ -127,7 +127,7 @@ impl BacktestRunner {
 
     pub fn convert_results_to_csv(&self) -> Result<i32> {
         let _ = self.save_terminal_log();
-        let reports_path = get_reports_path(&self.common, &self.run)?;
+        let reports_path = get_reports_full_path(&self.common, &self.run)?;
         let ret = read_results_xml_to_csv(&reports_path, &reports_path.with_extension("csv"));
         ret
     }
@@ -169,17 +169,49 @@ pub fn execute_run_queue(config: &CommonParams, runs: &Vec<RunParams>) -> Result
     Ok(())
 }
 
-pub fn collect_csv_filenames_from_queue(
+pub fn get_csv_filenames_from_queue(
     config: &CommonParams,
     runs: &Vec<RunParams>,
-) -> Result<Vec<PathBuf>> {
-    Ok(runs
-        .iter()
-        .map(|r| get_reports_path(&config, r).unwrap().with_extension("csv"))
-        .collect())
+) -> Vec<PathBuf> {
+    runs.iter()
+        .map(|r| {
+            config
+                .reports
+                .join(r.get_reports_filename())
+                .with_extension("csv")
+        })
+        .collect()
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_get_csv_filenames_from_queue() {
+        let common = CommonParams::_new_test();
+        assert_eq!(
+            get_csv_filenames_from_queue(&common, &Vec::new()),
+            Vec::<PathBuf>::new()
+        );
+
+        let runs = vec![RunParams::_new_test(1)];
+
+        assert_eq!(
+            get_csv_filenames_from_queue(&common, &runs),
+            [PathBuf::from(r"reports/test_USDCHF.csv")]
+        );
+
+        let mut runs = vec![RunParams::_new_test(1), RunParams::_new_test(1)];
+        runs[1].symbols = vec!["NZDAUD".into()];
+
+        assert_eq!(
+            get_csv_filenames_from_queue(&common, &runs),
+            [
+                PathBuf::from(r"reports/test_USDCHF.csv"),
+                PathBuf::from(r"reports/test_NZDAUD.csv")
+            ]
+        );
+        // FIXME this is not working.. never fails!!!
+    }
 }

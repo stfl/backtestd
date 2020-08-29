@@ -114,7 +114,6 @@ async fn backtest_run(
     backtest_runner::execute_run_queue(&config, &runs).map_err(|e| ErrorInternalServerError(e))?;
 
     Ok(HttpResponse::Ok().json(
-        collect_csv_filenames_from_queue(&config, &runs)
-            .map_err(|e| ErrorInternalServerError(e))?,
+        get_csv_filenames_from_queue(&config, &runs), // .map_err(|e| ErrorInternalServerError(e))?,
     ))
 }

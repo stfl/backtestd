@@ -1,4 +1,5 @@
 use super::signal_class::SignalClass;
+use crate::params::indi_func::IndiFunc;
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 
@@ -108,6 +109,24 @@ impl Indicator {
 
         None
     }
+
+    pub fn _new_test(func: IndiFunc, input_variant: i32) -> Self {
+        use crate::params::_vec_vec_to_bigdecimal;
+
+        Indicator {
+            name: format!("{:?}", func),
+            filename: Some(format!("{:?}", func)),
+            shift: 0,
+            inputs: match input_variant {
+                1 => _vec_vec_to_bigdecimal(vec![vec![1.]]),
+                2 => _vec_vec_to_bigdecimal(vec![vec![10., 20., 1.]]),
+                _ => Vec::new(),
+            },
+            buffers: None,
+            params: None,
+            class: SignalClass::Preset,
+        }
+    }
 }
 
 fn input_param_str(input: &Vec<BigDecimal>) -> String {
@@ -129,7 +148,6 @@ mod test {
     use crate::params::_vec_vec_to_bigdecimal;
     use crate::params::signal_class::SignalClass::*;
     use glob::glob;
-    use std::path::Path;
 
     #[test]
     fn indi_to_param_vec() {

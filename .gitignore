@@ -1,3 +1,4 @@
 /target
 /config
 **/*.rs.bk
+*.bak

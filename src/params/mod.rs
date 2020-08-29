@@ -23,7 +23,6 @@ pub mod indicator_set_files;
 pub mod run_params;
 pub mod run_params_file;
 pub mod signal_class;
-mod to_config;
 pub mod to_param_string;
 
 pub use indicator_set::IndicatorSet;
@@ -51,9 +50,15 @@ pub fn to_terminal_config(common: &CommonParams, run: &RunParams) -> Result<Stri
     // generate the reports path for the terminal.ini with windows-style "\"
     let reports_path_relative = common
         .reports
-        .join(run.name.clone() + "_" + &run.symbols
-              .iter()
-              .max_by(|x, y| x.cmp(y)).expect("get highest symbol failed"))
+        .join(
+            run.name.clone()
+                + "_"
+                + &run
+                    .symbols
+                    .iter()
+                    .max_by(|x, y| x.cmp(y))
+                    .expect("get highest symbol failed"),
+        )
         .with_extension("xml")
         // .join("reports.xml")
         .iter()
@@ -95,9 +100,15 @@ pub fn get_reports_dir(common: &CommonParams, run: &RunParams) -> Result<PathBuf
 
 pub fn get_reports_path(common: &CommonParams, run: &RunParams) -> Result<PathBuf> {
     let reports_path = get_reports_dir(&common, &run)?
-        .join(run.name.clone() + "_" + &run.symbols
-              .iter()
-              .max_by(|x, y| x.cmp(y)).expect("get highest symbol failed"))
+        .join(
+            run.name.clone()
+                + "_"
+                + &run
+                    .symbols
+                    .iter()
+                    .max_by(|x, y| x.cmp(y))
+                    .expect("get highest symbol failed"),
+        )
         .with_extension("xml");
     Ok(reports_path)
 }
@@ -300,7 +311,9 @@ mod test {
         common.reports = PathBuf::from(r"reports/inner");
         assert_eq!(
             (*get_reports_path(&common, &run).unwrap()).to_str(),
-            Some(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/inner/test_USDCHF.xml")
+            Some(
+                r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/inner/test_USDCHF.xml"
+            )
         );
 
         // FIXME paths are not platform agnostic

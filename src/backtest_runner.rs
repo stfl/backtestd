@@ -30,7 +30,7 @@ impl BacktestRunner {
     pub fn new(run: RunParams, common: &CommonParams) -> BacktestRunner {
         BacktestRunner {
             common: common.clone(),
-            run: run,
+            run,
         }
     }
 
@@ -120,7 +120,7 @@ impl BacktestRunner {
             .with_extension("log")
     }
 
-    fn delete_report(&self) -> Result<()> {
+    fn delete_xml_report(&self) -> Result<()> {
         let report = get_reports_path(&self.common, &self.run)?;
         debug!("deleting report {}", report.to_string_lossy());
         fs::remove_file(report)?;
@@ -166,10 +166,51 @@ impl BacktestRunner {
     }
 
     pub fn cleanup(&self) -> Result<()> {
-        self.delete_report()?;
+        self.delete_xml_report()?;
         self.delete_terminal_log()
-        // TODO delete sqlite file
+        // self.remove_sqlite_db()  // don't delete sqlite after the run!
     }
+
+    pub fn remove_sqlite_db(&self) -> std::result::Result<(), std::io::Error> {
+        std::fs::remove_file(
+            self.common
+                .workdir
+                .join(Path::new("MQL5/Files"))
+                .join(&self.run.name)
+                .with_extension("sqlite"),
+        )
+    }
+}
+
+pub fn execute_run_queue(config: &CommonParams, runs: &Vec<RunParams>) -> Result<()> {
+    for r in runs {
+        debug!(
+            "Run: {:?}\nInputs: {}",
+            r,
+            r.indi_set.count_inputs_crossed()
+        );
+        let mut runner = BacktestRunner::new(r.clone(), &config);
+        // if let Err(err) = runner.remove_sqlite_db() { // TODO this should be done from within the Expert
+        //     warn!("delete sqlite failed {:?}", err);
+        // };
+        runner.prepare_files().context("prepare failed");
+        runner.run().context("run failed");
+        runner
+            .convert_results_to_csv()
+            .context("convert to csv failed");
+        runner.cleanup().context("cleanup failed");
+    }
+    Ok(())
+}
+
+pub fn collect_csv_filenames_from_queue(
+    config: &CommonParams,
+    runs: &Vec<RunParams>,
+) -> Result<Vec<PathBuf>> {
+    Ok(runs
+        .iter()
+        .map(|r| get_reports_path(&config, r).unwrap().with_extension("csv"))
+        .collect())
 }
 
 /* async fn find_process(name : String) -> heim::process::ProcessResult<Process>

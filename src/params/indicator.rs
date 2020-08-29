@@ -55,7 +55,7 @@ impl Indicator {
                 params
                     .iter()
                     .enumerate()
-                    .map(|(i, param)| format!("param{}={:.2}", i, param)),
+                    .map(|(i, param)| format!("param{}={:.5}", i, param)),
             );
         }
         res
@@ -130,10 +130,10 @@ impl Indicator {
 
 fn input_param_str(input: &Vec<BigDecimal>) -> String {
     match input.len() {
-        1 => format!("{:.2}||0||0||0||N", input[0]),
-        3 => format!("0||{:.2}||{:.2}||{:.2}||Y", input[0], input[2], input[1]),
+        1 => format!("{:.5}||0||0||0||N", input[0]),
+        3 => format!("0||{:.5}||{:.5}||{:.5}||Y", input[0], input[2], input[1]),
         4 => format!(
-            "{:.2}||{:.2}||{:.2}||{:.2}||Y",
+            "{:.5}||{:.5}||{:.5}||{:.5}||Y",
             input[0], input[1], input[3], input[2]
         ),
         e => panic!("wrong length of indicator params input: {}", e),
@@ -220,10 +220,15 @@ mod test {
             indi.params = Some(vec_to_bigdecimal(vec![1.]));
             assert_eq!(
                 indi.to_param_string_vec(),
-                vec!["Indicator=ama", "SignalClass=0", "Shift=0", "param0=1.00",]
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect::<Vec<String>>()
+                vec![
+                    "Indicator=ama",
+                    "SignalClass=0",
+                    "Shift=0",
+                    "param0=1.00000",
+                ]
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>()
             );
 
             indi.params = Some(vec_to_bigdecimal(vec![1., 4.55]));
@@ -233,8 +238,8 @@ mod test {
                     "Indicator=ama",
                     "SignalClass=0",
                     "Shift=0",
-                    "param0=1.00",
-                    "param1=4.55",
+                    "param0=1.00000",
+                    "param1=4.55000",
                 ]
                 .iter()
                 .map(|s| s.to_string())
@@ -258,7 +263,7 @@ mod test {
                 "Indicator=ama",
                 "SignalClass=0",
                 "Shift=7",
-                "input0=3.00||0||0||0||N",
+                "input0=3.00000||0||0||0||N",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -272,8 +277,8 @@ mod test {
                 "Indicator=ama",
                 "SignalClass=0",
                 "Shift=7",
-                "input0=3.00||0||0||0||N",
-                "input1=4.00||0||0||0||N",
+                "input0=3.00000||0||0||0||N",
+                "input1=4.00000||0||0||0||N",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -287,9 +292,9 @@ mod test {
                 "Indicator=ama",
                 "SignalClass=0",
                 "Shift=7",
-                "input0=3.00||0||0||0||N",
-                "input1=4.00||0||0||0||N",
-                "input2=0||10.00||0.50||200.00||Y",
+                "input0=3.00000||0||0||0||N",
+                "input1=4.00000||0||0||0||N",
+                "input2=0||10.00000||0.50000||200.00000||Y",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -304,10 +309,10 @@ mod test {
                 "Indicator=ama",
                 "SignalClass=0",
                 "Shift=7",
-                "input0=3.00||0||0||0||N",
-                "input1=4.00||0||0||0||N",
-                "input2=0||10.00||0.50||200.00||Y",
-                "input3=15.00||10.00||0.50||20.00||Y",
+                "input0=3.00000||0||0||0||N",
+                "input1=4.00000||0||0||0||N",
+                "input2=0||10.00000||0.50000||200.00000||Y",
+                "input3=15.00000||10.00000||0.50000||20.00000||Y",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -321,10 +326,10 @@ mod test {
                 "Indicator=ama",
                 "SignalClass=1",
                 "Shift=7",
-                "input0=3.00||0||0||0||N",
-                "input1=4.00||0||0||0||N",
-                "input2=0||10.00||0.50||200.00||Y",
-                "input3=15.00||10.00||0.50||20.00||Y",
+                "input0=3.00000||0||0||0||N",
+                "input1=4.00000||0||0||0||N",
+                "input2=0||10.00000||0.50000||200.00000||Y",
+                "input3=15.00000||10.00000||0.50000||20.00000||Y",
             ]
             .iter()
             .map(|s| s.to_string())

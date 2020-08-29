@@ -103,6 +103,78 @@ OptimizationCriterion={opti_crit}",
     pub fn iter(&self) -> impl Iterator<Item = &String> {
         self.symbols.iter()
     }
+
+    pub fn split_run_into_queue(self) -> Vec<Self> {
+        let run = self;
+        let optimize = run.optimize;
+        let mut runs = match (optimize) {
+            OptimizeMode::Complete => run.split_too_many_runs(),
+            _ => vec![run],
+        };
+
+        if optimize != OptimizeMode::Genetic {
+            // create a vec of new runs with only a single Symbol
+            // if we test in Genetic mode use all Symbols
+            runs = runs
+                .into_iter()
+                .flat_map(|r| r.split_per_symbol())
+                .collect();
+        }
+
+        info!(
+            "{} Runs in the queue:\n{}",
+            runs.len(),
+            runs.clone()
+                .into_iter()
+                .map(|r| format!("{}: {}", r.name, r.symbols.join(" ")))
+                .collect::<Vec<String>>()
+                .join("\n")
+        );
+
+        runs
+    }
+
+    fn split_too_many_runs(self) -> Vec<Self> {
+        let mut runs: Vec<RunParams> = Vec::new();
+        let run = self;
+        // MT5 forces genetic optimization if there are more than 100M possibilities
+        let new_sets = run.clone().indi_set.slice_recursive(100_000_000); // TODO implement slice_recursive on &self to not move indi_set out of run
+
+        if new_sets.len() > 1 {
+            runs = new_sets
+                .into_iter()
+                .enumerate()
+                .map(|(i, s)| {
+                    let mut r = run.clone();
+                    r.indi_set = s;
+                    r.name = format!("{}_{}", r.name, i);
+                    r
+                })
+                .collect::<Vec<RunParams>>();
+        } else {
+            runs = vec![run];
+        }
+        runs
+    }
+
+    fn split_per_symbol(self) -> Vec<Self> {
+        let r = self;
+        if r.indi_set.count_inputs_crossed() > crate::RUN_LIMIT_MULTI_CURRENCY {
+            r.symbols
+                .iter()
+                .map(|s| {
+                    let mut rr = r.clone();
+                    rr.symbols = vec![s.into()];
+                    debug!("creating a separate run for {}", s);
+                    // keep the same name -> all Symbols are stored to the same sqlite db as individual table
+                    // rr.name = format!("{}_{}", r.name, s);
+                    rr
+                })
+                .collect::<Vec<RunParams>>()
+        } else {
+            vec![r]
+        }
+    }
 }
 
 #[cfg(test)]

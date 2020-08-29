@@ -20,7 +20,7 @@ use serde_derive::Serialize;
 
 #[macro_use]
 extern crate anyhow;
-use anyhow::{Context, Result};
+// use anyhow::{Context, Result};
 // use anyhow::Context;
 
 extern crate pretty_env_logger;
@@ -59,12 +59,12 @@ use results::xml_reader::*;
 // The overhead to init the backtest is also significant
 // If the number of crossed out inputs is "low" then running the multi-currency EA is faster
 // ... for OptimizeMode::Complete
-const RUN_LIMIT_MULTI_CURRENCY: u64 = 10_000;
+const RUN_LIMIT_MULTI_CURRENCY: u64 = 5_000;
 
 #[actix_rt::main]
-// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-// async fn main() -> Result<(), anyhow::Error> {
 async fn main() -> std::io::Result<()> {
+    // async fn main() -> Result<(), anyhow::Error> {
+    // async fn main() -> std::io::Result<()> {
     // TODO extend_var or sth
     std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info,debug");
     pretty_env_logger::init();
@@ -148,14 +148,9 @@ async fn main() -> std::io::Result<()> {
                 .wrap(middleware::Logger::default())
                 .data(config.clone())
                 // .data(web::Data::new(Mutex::new(config.clone())))
-                // websocket route
                 .service(web::resource("/run").route(web::post().to(backtest_run)))
-            // .service(web::resource("/generate/").route(web::get().to(gen_signal)))
-            // .service(web::resource("/config/").route(web::get().to(set_config)))
-            // static files
-            // .service(fs::Files::new("/", "static/").index_file("index.html"))
         })
-        // start http server on 127.0.0.1:8080
+        // start http server
         .bind("0.0.0.0:12311")?
         .run()
         .await;
@@ -205,94 +200,8 @@ async fn main() -> std::io::Result<()> {
             .expect("reading RunParamsFile failed")
             .into();
 
-        let optimize = run.optimize;
-        let mut runs: Vec<RunParams> = Vec::new();
-        if optimize == OptimizeMode::Complete {
-            // MT5 forces genetic optimization if there are more than 100M possibilities
-            let new_sets = run.clone().indi_set.slice_recursive(100_000_000); // TODO implement slice_recursive on &self to not move indi_set out of run
-
-            if new_sets.len() > 1 {
-                runs = new_sets
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, s)| {
-                        let mut r = run.clone();
-                        r.indi_set = s;
-                        r.name = format!("{}_{}", r.name, i);
-                        r
-                    })
-                    .collect::<Vec<RunParams>>();
-            } else {
-                runs = vec![run];
-            }
-        } else {
-            // if the vec was not filled yet. add the original run
-            runs = vec![run];
-        }
-
-        // delete all sqlite databases for this queue
-        for r in &runs {
-            std::fs::remove_file(
-                config
-                    .workdir
-                    .join(Path::new("MQL5/Files"))
-                    .join(&r.name)
-                    .with_extension("sqlite"),
-            );
-        }
-
-        if optimize != OptimizeMode::Genetic {
-            // create a vec of new runs with only a single Symbol
-            // if we test in Genetic mode use all Symbols
-            runs = runs
-                .into_iter()
-                .flat_map(|r| {
-                    if r.indi_set.count_inputs_crossed() > RUN_LIMIT_MULTI_CURRENCY {
-                        r.symbols
-                            .iter()
-                            .map(|s| {
-                                let mut rr = r.clone();
-                                rr.symbols = vec![s.into()];
-                                debug!("creating a separate run for {}", s);
-                                // keep the same name -> all Symbols are stored to the same sqlite db as individual table
-                                // rr.name = format!("{}_{}", r.name, s);
-                                rr
-                            })
-                            .collect::<Vec<RunParams>>()
-                    } else {
-                        vec![r]
-                    }
-                })
-                .collect();
-        }
-
-        info!(
-            "{} Runs in the queue:\n{}",
-            runs.len(),
-            runs.clone()
-                .into_iter()
-                .map(|r| format!("{}: {}", r.name, r.symbols.join(" ")))
-                .collect::<Vec<String>>()
-                .join("\n")
-        );
-
-        for r in runs {
-            debug!(
-                "Run: {:?}\nInputs: {}",
-                r,
-                r.indi_set.count_inputs_crossed()
-            );
-            let mut runner = BacktestRunner::new(r, &config);
-            runner.prepare_files().expect("prepare failed");
-            runner.run().expect("run failed");
-            runner
-                .convert_results_to_csv()
-                .expect("convert to csv failed");
-            if matches.value_of("CLEANUP").is_some() {
-                runner.cleanup().expect("cleanup failed");
-            }
-        }
-        return Ok(());
+        let runs = run.split_run_into_queue();
+        backtest_runner::execute_run_queue(&config, &runs).expect("running queue failed");
     }
 
     Ok(())
@@ -321,16 +230,26 @@ async fn backtest_run(
     let run = data.into_inner();
     let config = config.into_inner();
     info!("running backtest with common: {:?}\nrun:{:?}", config, run);
-    let runner = BacktestRunner::new(run, &config);
-    runner
-        .prepare_files()
-        .map_err(|e| ErrorInternalServerError(e))?;
-    runner.run().map_err(|e| ErrorInternalServerError(e))?;
+
+    let runs = run.split_run_into_queue();
+    backtest_runner::execute_run_queue(&config, &runs).map_err(|e| ErrorInternalServerError(e))?;
+
     Ok(HttpResponse::Ok().json(
-        runner
-            .read_results()
+        collect_csv_filenames_from_queue(&config, &runs)
             .map_err(|e| ErrorInternalServerError(e))?,
     ))
+
+    // let runner = BacktestRunner::new(run, &config);
+    // runner
+    //     .prepare_files()
+    //     .map_err(|e| ErrorInternalServerError(e))?;
+    // runner.run().map_err(|e| ErrorInternalServerError(e))?;
+    // Ok(HttpResponse::Ok().json(
+    //     runner
+    //         .read_results()
+    //         .map_err(|e| ErrorInternalServerError(e))?,
+    // ))
+
 }
 
 // async fn signal_gen(

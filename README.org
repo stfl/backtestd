@@ -6,7 +6,7 @@ sudo apt install mingw-w64 -y
 rustup target add x86_64-pc-windows-gnu
 #+END_SRC
 
-~\~/.cargo/config~
+~~/.cargo/config~
 #+BEGIN_SRC ini
 [target.x86_64-pc-windows-gnu]
 linker = "x86_64-w64-mingw32-gcc"

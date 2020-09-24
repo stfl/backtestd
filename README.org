@@ -1,5 +1,28 @@
+* Installation
 
-* Cross Compiling
+** Rust Nightly
+currently rust nightly is required due to the bench in the xml reader. This is
+not actually required but I can't be bothered to make this configurable.
+
+Install [[https://rustup.rs/][rustup]]
+
+#+BEGIN_SRC bash
+rustup default nightly
+#+END_SRC
+
+** Compile
+
+#+BEGIN_SRC bash
+cargo build
+#+END_SRC
+
+** Deploy
+
+#+BEGIN_SRC bash
+./deploy.sh <path/to/MQL5>
+#+END_SRC
+
+** Cross Compiling for Windows from Linux
 
 #+BEGIN_SRC bash
 sudo apt install mingw-w64 -y
@@ -16,3 +39,5 @@ ar = "x86_64-w64-mingw32-gcc-ar"
 #+BEGIN_SRC bash
 cargo build --release --target x86_64-pc-windows-gnu
 #+END_SRC
+* TODO Execution
+* TODO Configuration

@@ -70,17 +70,7 @@ async fn main() -> std::io::Result<()> {
     // Daemon App
     // -------------
     if let Some(_matches) = matches.subcommand_matches("daemon") {
-        return HttpServer::new(move || {
-            ActixApp::new()
-                // enable logger
-                .wrap(middleware::Logger::default())
-                .data(config.clone())
-                .service(web::resource("/run").route(web::post().to(backtest_run)))
-        })
-        // start http server
-        .bind("0.0.0.0:12311")?
-        .run()
-        .await;
+        return server(config).await;
     }
 
     // -------------
@@ -93,11 +83,26 @@ async fn main() -> std::io::Result<()> {
             .expect("reading RunParamsFile failed")
             .into();
 
-        let runs = run.split_run_into_queue();
+        // let runs = run.split_run_into_queue();
+        let runs = vec![run];
         backtest_runner::execute_run_queue(&config, &runs).expect("running queue failed");
     }
 
     Ok(())
+}
+
+async fn server(config: CommonParams) -> std::io::Result<()> {
+    return HttpServer::new(move || {
+            ActixApp::new()
+                // enable logger
+                .wrap(middleware::Logger::default())
+                .data(config.clone())
+                .service(web::resource("/run").route(web::post().to(backtest_run)))
+        })
+        // start http server
+        .bind("0.0.0.0:12311")?
+        .run()
+        .await;
 }
 
 async fn backtest_run(
@@ -108,7 +113,8 @@ async fn backtest_run(
     let config = config.into_inner();
     info!("running backtest with common: {:?}\nrun:{:?}", config, run);
 
-    let runs = run.split_run_into_queue();
+    // let runs = run.split_run_into_queue();
+    let runs = vec![run];
     backtest_runner::execute_run_queue(&config, &runs).map_err(|e| ErrorInternalServerError(e))?;
 
     Ok(HttpResponse::Ok().json(

@@ -437,7 +437,8 @@ mod test {
                         "name": "ma",
                         "class": "Preset",
                         "inputs": [[1.0], [1.0, 100.0, 3.0]],
-                        "shift": 0
+                        "shift": 0,
+                        "input_description": ["some desc"]
                     },
                     "Confirm2": {
                         "name": "ma2",
@@ -475,6 +476,7 @@ mod test {
                 "visual": false,
                 "symbols": ["EURUSD", "AUDCAD"]
             }"#;
+        // expects to silently ignores indi_set.Confirm.input_description
 
         let des: RunParams = serde_json::from_str(run_string).unwrap();
         for (f, i) in run.indi_set.iter() {

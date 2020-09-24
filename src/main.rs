@@ -37,7 +37,7 @@ const RUN_LIMIT_MULTI_CURRENCY: u64 = 5_000;
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
     // TODO extend_var or sth
-    std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info,debug");
+    std::env::set_var("RUST_LOG", "actix_server=debug,actix_web=debug,debug");
     pretty_env_logger::init();
 
     let matches = clap_app!(BacktestRunner =>
@@ -75,14 +75,12 @@ async fn main() -> std::io::Result<()> {
                 // enable logger
                 .wrap(middleware::Logger::default())
                 .data(config.clone())
-                // .data(web::Data::new(Mutex::new(config.clone())))
                 .service(web::resource("/run").route(web::post().to(backtest_run)))
         })
         // start http server
         .bind("0.0.0.0:12311")?
         .run()
         .await;
-        // returning here..
     }
 
     // -------------

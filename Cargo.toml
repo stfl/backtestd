@@ -1,5 +1,5 @@
 [package]
-name = "backtest-run"
+name = "backtestd"
 version = "0.3.1"
 authors = ["Stefan Lendl <ste.lendl@gmail.com>"]
 edition = "2018"

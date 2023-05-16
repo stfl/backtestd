@@ -43,6 +43,8 @@ be passed in via the API.
 
 Configuring the indicators to use.
 
+Any MT5 indicator can be configured and used. To set this up: [[https://github.com/stfl/backtestd-expert#signal-classes][Indicator Configuration]]
+
 [[config/indicator/confirm/aroon_up_down.yaml]]
 #+begin_src yaml
 ---

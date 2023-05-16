@@ -1,7 +1,7 @@
 [package]
 name = "backtestd"
 version = "0.3.1"
-authors = ["Stefan Lendl <ste.lendl@gmail.com>"]
+authors = ["Stefan Lendl <s@stfl.dev>"]
 edition = "2018"
 
 [dependencies]

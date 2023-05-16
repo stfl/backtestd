@@ -1,35 +1,206 @@
-* Installation
+* backtestd - A Backtest Runner and API for [[https://github.com/stfl/backtestd-expert][backtestd-expert]]
 
-** Rust Nightly
-currently rust nightly is required due to the bench in the xml reader. This is
-not actually required but I can't be bothered to make this configurable.
+** Introduction
+This repository contains a backtest runner and API designed for my MetaTrader 5
+experts (EA) [[https://github.com/stfl/backtestd-expert][backtestd-expert]], with a specific focus on the principles of the No
+Nonsense Forex (NNFX) approach. The fundamental rules of the algorithm are
+predefined, but the specific indicators employed are not.
 
-Install [[https://rustup.rs/][rustup]]
+backtestd and its companion, [[https://github.com/stfl/backtestd-expert][backtestd-expert]], are tools designed to identify
+the most suitable indicators for use in an algorithmic trading strategy.
 
-#+BEGIN_SRC bash
-rustup default nightly
-#+END_SRC
+** Functionality
+backtestd adopts a divide-and-conquer strategy to navigate through the solution
+space. It does this by backtesting individual indicators, scoring them with a
+specific metric, and then integrating them with other indicators to form a
+comprehensive indicator set for the full algorithm.
 
-** Compile
+backtestd-expert is designed flexibly, allowing for external configuration of
+the actual MT5 indicators and parameter space used.
 
-#+BEGIN_SRC bash
-cargo build
-#+END_SRC
+** Optimization
+While MT5's in-built backtesting and optimization tools are powerful, capable of
+running multiple backtests simultaneously and distributing execution across
+multiple machines in a backtest cluster, they are considerably slow when
+initiating a new backtest run with a single parameter. backtestd addresses this
+limitation by always initiating backtests with a parameter range, thereby
+optimizing the process.
 
-** Deploy
+* Usage
+backtestd offers flexibility in usage - it can either be used as a Command-Line
+Interface (CLI) by providing YAML-based configurations, or as an API by
+submitting the run configuration as JSON.
 
-#+BEGIN_SRC bash
-./deploy.sh <path/to/MQL5>
-#+END_SRC
+backtestd transforms the legacy XML result file into a more readable CSV format,
+or if used as an API, it returns the results as JSON.
 
-** Cross Compiling for Windows from Linux
+** Configuration
+
+The CLI is configured via yaml files and the same config structures as json can
+be passed in via the API.
+
+*** Indicators config
+
+Configuring the indicators to use.
+
+[[config/indicator/confirm/aroon_up_down.yaml]]
+#+begin_src yaml
+---
+name: aroon
+filename: Aroon_Up_Down
+class: TwoLinesCross
+inputs:
+# input int AroonPeriod = 14;
+    - - 14.0
+      - 23.0
+      - 30.0
+      - 1.0
+buffers:
+  - 0  # up buffer
+  - 1  # down buffer
+shift: 0
+#+end_src
+
+*** Run config
+
+The run configuration describes a set of indicator which refer to indicator
+configuration files and some parameters for the backtest execution.
+When called via the API, the indicator config can be nested.
+
+[[config/run/run_aroon.qqe.rex.kijunsen-genetic.yaml]]
+#+begin_src yaml
+---
+name: aroon.qqe.rex.kijunsen-genetic
+indi_set:
+  Confirm: config/indicator/confirm/aroon_up_down.yaml
+  Confirm2: config/indicator/confirm/qqe.yaml
+  # Confirm3: ~
+  Exit: config/indicator/exit/rex.yaml
+  # Continue: ~
+  Baseline: config/indicator/baseline/kijunsen.yaml
+  # Volume: ~
+date:
+  - 2014-03-01T00:00:00-00:00
+  - 2021-03-01T00:00:00-00:00
+backtest_model: 2
+    # EveryTick = 0,     // "Every tick"
+    # OneMinuteOHLC = 1, // "1 minute OHLC"
+    # OpenPrice = 2,     // "Open price only"
+    # MathCalc = 3,      // "Math calculations"
+    # EveryTickReal = 4, // "Every tick based on real ticks"
+optimize: 2
+    # Disabled = 0,   // optimization disabled
+    # Complete = 1,   // "Slow complete algorithm"
+    # Genetic = 2,    // "Fast genetic based algorithm"
+    # AllSymbols = 3, // "All symbols selected in Market Watch"
+optimize_crit: 5
+    # Balance = 0,         // the maximum balance value,
+    # BalanceProf = 1,     // the maximum value of product of the balance and profitability,
+    # BalancePayoff = 2,   // the product of the balance and expected payoff,
+    # Drawdown = 3,        // the maximum value of the expression (100% - Drawdown)*Balance,
+    # BalanceRecovery = 4, // the product of the balance and the recovery factor,
+    # BalanceSharpe = 5,   // the product of the balance and the Sharpe Ratio,
+    # Custom = 6, // a custom optimization criterion received from the OnTester() function in the Expert Advisor).
+visual: true
+store_results: 0
+    # None
+    # SideChanges = 1
+symbols:
+  - EURUSD
+  - AUDCAD
+  - GBPUSD
+  - USDCHF
+  - USDJPY
+  - USDCAD
+  - AUDUSD
+  - EURCHF
+  - EURJPY
+  - EURGBP
+  - EURCAD
+  - GBPCHF
+  - GBPJPY
+  - AUDJPY
+  - AUDNZD
+  - AUDCHF
+  - CHFJPY
+  - EURAUD
+  - EURNZD
+  - CADCHF
+  - GBPAUD
+  - GBPCAD
+  - GBPNZD
+  - NZDCAD
+  - NZDCHF
+  - NZDJPY
+  - NZDUSD
+  - CADJPY
+#+end_src
+*** Common config
+
+This configures the base configuration per machine on how to execute the MT5 backtest
+
+[[config/config_win10.yaml]]
+#+begin_src yaml
+---
+params_file: expert_params.set
+terminal_exe: "C:\\Program Files\\MetaTrader 5\\terminal64.exe"
+workdir: "C:\\Users\\Stefan\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075"
+reports: reports
+expert: "backtestd\\backtestd-expert.ex5"
+wine: false
+period: D1
+login: "26180"
+use_remote: true
+use_local: true
+replace_report: true
+shutdown_terminal: true
+
+deposit: 100000
+currency: USD
+leverage: 200
+execution_mode: 0
+#+end_src
+
+** Running
+
+#+begin_quote
+USAGE:
+    backtestd [OPTIONS] [SUBCOMMAND]
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+    -c, --config <CONFIG>      Config file
+    -w, --workdir <WORKDIR>    overwrite workdir path
+
+SUBCOMMANDS:
+    daemon    start a daemon with a REST API
+    help      Prints this message or the help of the given subcommand(s)
+    run       run a backtest
+#+end_quote
+
+to start the daemon with the API on port 12311
+
+#+begin_src bash :noeval
+backtestd daemon
+#+end_src
+
+** Installation
+*** Rust Nightly
+
+Currently, rust ~nightly~ is required due to the bench in the XML reader. This is
+not actually required, but I can't be bothered to make this configurable.
+
+*** Cross Compiling for Windows from Linux
 
 #+BEGIN_SRC bash
 sudo apt install mingw-w64 -y
 rustup target add x86_64-pc-windows-gnu
 #+END_SRC
 
-~~/.cargo/config~
+~/.cargo/config
 #+BEGIN_SRC ini
 [target.x86_64-pc-windows-gnu]
 linker = "x86_64-w64-mingw32-gcc"
@@ -39,5 +210,10 @@ ar = "x86_64-w64-mingw32-gcc-ar"
 #+BEGIN_SRC bash
 cargo build --release --target x86_64-pc-windows-gnu
 #+END_SRC
-* TODO Execution
-* TODO Configuration
+
+** Deploy
+
+#+BEGIN_SRC bash
+./deploy.sh <path/to/MQL5>
+#+END_SRC
+

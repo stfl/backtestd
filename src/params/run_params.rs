@@ -39,16 +39,8 @@ impl RunParams {
         strings
     }
 
-    pub fn get_reports_filename(&self) -> PathBuf {
-        PathBuf::from(
-            self.name.clone()
-                + "_"
-                + self
-                    .symbols
-                    .iter()
-                    .max_by(|x, y| x.cmp(y))
-                    .expect("cannot determine the alpahnumerical first symbol"),
-        )
+    pub fn get_reports_filename(&self) -> String {
+        self.name.clone()
     }
 
     pub fn to_config(&self) -> String {
@@ -69,7 +61,7 @@ OptimizationCriterion={opti_crit}",
         )
     }
 
-    pub fn split_run_into_queue(self) -> Vec<Self> {
+    pub fn split_run_into_queue(self, split_years: u32) -> Vec<Self> {
         let run = self;
         let optimize = run.optimize;
         let mut runs = match optimize {
@@ -86,12 +78,17 @@ OptimizationCriterion={opti_crit}",
                 .collect();
         }
 
+        runs = runs
+            .into_iter()
+            .flat_map(|r| r.split_date_range(split_years))
+            .collect();
+
         info!(
             "{} Runs in the queue:\n{}",
             runs.len(),
             runs.clone()
                 .into_iter()
-                .map(|r| format!("{}: {}", r.name, r.symbols.join(" ")))
+                .map(|r| format!("{}: {} {:?}", r.name, r.symbols.join(" "), r.date))
                 .collect::<Vec<String>>()
                 .join("\n")
         );
@@ -124,7 +121,7 @@ OptimizationCriterion={opti_crit}",
 
     fn split_per_symbol(self) -> Vec<Self> {
         let r = self;
-        if r.indi_set.count_inputs_crossed() > crate::RUN_LIMIT_MULTI_CURRENCY {
+        // if r.indi_set.count_inputs_crossed() > crate::RUN_LIMIT_MULTI_CURRENCY {
             r.symbols
                 .iter()
                 .map(|s| {
@@ -132,13 +129,30 @@ OptimizationCriterion={opti_crit}",
                     rr.symbols = vec![s.into()];
                     debug!("creating a separate run for {}", s);
                     // keep the same name -> all Symbols are stored to the same sqlite db as individual table
-                    // rr.name = format!("{}_{}", r.name, s);
+                    rr.name = format!("{}_{}", r.name, s);
                     rr
                 })
                 .collect::<Vec<RunParams>>()
-        } else {
-            vec![r]
-        }
+        // } else {
+        //     vec![r]
+        // }
+    }
+
+    fn split_date_range(self, num: u32) -> Vec<Self> {
+        let r = self;
+        let duration_split = (r.date.1 - r.date.0) / num as i32;
+        (1..=num)
+            .map(|n| {
+                let mut rr = r.clone();
+                rr.date = (
+                    r.date.0 + duration_split * (n as i32 - 1),
+                    r.date.0 + duration_split * n as i32
+                );
+                rr.name = format!("{}_({})", r.name, rr.date.0.date().to_string());
+                debug!("creating a separate run for {:?}", rr.date);
+                rr
+            })
+            .collect::<Vec<RunParams>>()
     }
 
     pub fn _new_test(num: usize) -> Self {
@@ -316,7 +330,7 @@ Model=0
 Optimization=1
 OptimizationCriterion=6
 Symbol=USDJPY
-Report=reports\test_USDJPY.xml"
+Report=reports\test.xml"
         );
     }
 }

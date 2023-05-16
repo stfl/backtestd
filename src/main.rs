@@ -50,6 +50,8 @@ async fn main() -> std::io::Result<()> {
             (about: "run a backtest")
             (@arg INPUT: +required "yaml file the specifies the run params")
             (@arg CLEANUP: -c --cleanup "cleanup files after running the backtest")
+            (@arg SPLIT_YEARS: --splityears +takes_value)
+            // (@arg SPLIT_SYMBOLS: --split-symbols)
         )
         (@subcommand daemon =>
             (about: "start a daemon with a REST API")
@@ -83,8 +85,9 @@ async fn main() -> std::io::Result<()> {
             .expect("reading RunParamsFile failed")
             .into();
 
+        let runs = run.split_run_into_queue(value_t!(matches, "SPLIT_YEARS", u32).unwrap_or(1));
         // let runs = run.split_run_into_queue();
-        let runs = vec![run];
+        // let runs = vec![run];
         backtest_runner::execute_run_queue(&config, &runs).expect("running queue failed");
     }
 

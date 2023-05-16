@@ -39,19 +39,19 @@ pub fn to_terminal_config(common: &CommonParams, run: &RunParams) -> Result<Stri
         .reports
         .join(
             run.name.clone()
-                + "_"
-                + &run
-                    .symbols
-                    .iter()
-                    .max_by(|x, y| x.cmp(y))
-                    .expect("get highest symbol failed"),
+                // + "_"
+                // + &run
+                //     .symbols
+                //     .iter()
+                //     .max_by(|x, y| x.cmp(y))
+                //     .expect("get highest symbol failed")
+            + ".xml"
         )
-        .with_extension("xml")
-        .iter()
+        .iter()  // iter over path elements
         .filter_map(|s| s.to_str())
         .collect::<Vec<&str>>()
         .join("\\");
-    Ok(format!(
+    let terminal_config = format!(
         "[Common]
 Login={login}
 ProxyEnable=0
@@ -73,7 +73,9 @@ Report={report}",
             // this is a very vage assumtion and needs to be double and tripple checked in the EA
             .context("sorting symbols failed")?,
         report = reports_path_relative
-    ))
+    );
+    debug!("Wrote terminal config:\n{}", terminal_config);
+    Ok(terminal_config)
 }
 
 pub fn get_reports_dir(common: &CommonParams) -> Result<PathBuf> {
@@ -81,11 +83,11 @@ pub fn get_reports_dir(common: &CommonParams) -> Result<PathBuf> {
         common.reports.is_relative(),
         "Reports path needs to be relative"
     );
-    Ok(common.workdir.join(&common.reports)) //.join(&run.name).with_extension("xml")))
+    Ok(common.workdir.join(&common.reports))
 }
 
 pub fn get_reports_full_path(common: &CommonParams, run: &RunParams) -> Result<PathBuf> {
-    Ok(get_reports_dir(&common)?.join(run.get_reports_filename().with_extension("xml")))
+    Ok(get_reports_dir(&common)?.join(run.get_reports_filename() + ".xml"))
 }
 
 #[derive(Debug, PartialEq, Copy, Clone, Serialize_repr, Deserialize_repr)]
@@ -276,20 +278,20 @@ mod test {
 
         assert_eq!(
             (*get_reports_full_path(&common, &run).unwrap()).to_str(),
-            Some(r"C:/workdir/reports/test_USDCHF.xml")
+            Some(r"C:/workdir/reports/test.xml")
         );
 
         common.workdir = PathBuf::from(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5");
         assert_eq!(
             (*get_reports_full_path(&common, &run).unwrap()).to_str(),
-            Some(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/test_USDCHF.xml")
+            Some(r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/test.xml")
         );
 
         common.reports = PathBuf::from(r"reports/inner");
         assert_eq!(
             (*get_reports_full_path(&common, &run).unwrap()).to_str(),
             Some(
-                r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/inner/test_USDCHF.xml"
+                r"/home/stefan/.wine/drive_c/Program Files/MetaTrader 5/reports/inner/test.xml"
             )
         );
 

@@ -177,8 +177,7 @@ pub fn get_csv_filenames_from_queue(
         .map(|r| {
             config
                 .reports
-                .join(r.get_reports_filename())
-                .with_extension("csv")
+                .join(r.get_reports_filename() + ".csv")
         })
         .collect()
 }
@@ -199,7 +198,7 @@ mod test {
 
         assert_eq!(
             get_csv_filenames_from_queue(&common, &runs),
-            [PathBuf::from(r"reports/test_USDCHF.csv")]
+            [PathBuf::from(r"reports/test.csv")]
         );
 
         let mut runs = vec![RunParams::_new_test(1), RunParams::_new_test(1)];
@@ -208,8 +207,8 @@ mod test {
         assert_eq!(
             get_csv_filenames_from_queue(&common, &runs),
             [
-                PathBuf::from(r"reports/test_USDCHF.csv"),
-                PathBuf::from(r"reports/test_NZDAUD.csv")
+                PathBuf::from(r"reports/test.csv"),
+                PathBuf::from(r"reports/test.csv")
             ]
         );
         // FIXME this is not working.. never fails!!!

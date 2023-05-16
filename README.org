@@ -163,7 +163,7 @@ execution_mode: 0
 
 ** Running
 
-#+begin_quote
+#+begin_src txt
 USAGE:
     backtestd [OPTIONS] [SUBCOMMAND]
 
@@ -179,7 +179,7 @@ SUBCOMMANDS:
     daemon    start a daemon with a REST API
     help      Prints this message or the help of the given subcommand(s)
     run       run a backtest
-#+end_quote
+#+end_src
 
 to start the daemon with the API on port 12311
 
